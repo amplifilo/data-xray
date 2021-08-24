@@ -1,4 +1,4 @@
-# data-xray
+# data-xray (a Pythonic cure for hyperspectral morass)
 
 Data-Xray provides a Pythonic interface to organization and analysis 
 of data, acquired primarily with Nanonis controllers by Specs GmbH.
