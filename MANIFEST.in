@@ -1,0 +1,2 @@
+include CHANGES.txt LICENSE.txt README.rst data_xray_examples.py #test.example.sh
+#recursive-include docs *
