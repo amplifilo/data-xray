@@ -26,8 +26,9 @@ def dummy(var):
 class GetData:
     def __init__(self, fname=None, fromcdf=None, savecdf=0):
         pass
-
-    def CrawlDir(self, topdir=[], ext='sxm'):
+    
+    @classmethod
+    def crawl_dir(cls, topdir=[], ext='sxm'):
         # directory crawler: return all files of a given extension
         # in the current and all the nested directories
         import tkinter as tk
@@ -50,7 +51,8 @@ class GetData:
                         fn[root] = [addname]
         return fn
 
-    def SelectFolder(self):
+    @classmethod
+    def select_folder(cls):
         import tkinter as tk
         from tkinter import filedialog
 
@@ -58,7 +60,8 @@ class GetData:
         root.withdraw()
         return filedialog.askdirectory()
 
-    def SearchFile(self, patt=None, base=None, generic=False):
+    @classmethod
+    def search_file(clf, patt=None, base=None, generic=False):
         ''' Yield files that match a given pattern '''
         if base is None:
             base = os.getcwd()
@@ -77,8 +80,8 @@ class GetData:
                 except IOError as error:
                     print(error)
 
-
-    def FindData(self, topdir=[], ext='3ds', skip=['blank'], get_data=False):
+    @classmethod
+    def find_data(cls, topdir=[], ext='3ds', skip=['blank'], get_data=False):
         # directory crawler: return all files of a given extension
         # in the current and all the nested directories
         from data_xray import nanonisio as nio
@@ -103,7 +106,8 @@ class GetData:
 
         return dataList if get_data else dataFiles
 
-    def SimpleCSVread(self, fl, separator, header=0):
+    @classmethod
+    def simple_csvread(cls, fl, separator, header=0):
         a = open(fl, 'rb')
         lines = a.readlines()
         datlist = list()
@@ -119,8 +123,8 @@ class GetData:
         a.close()
         return datlist
     
-
-    def FindGrids(self, topdir=[], ext='3ds', skip=['blank'], get_data=False):
+    @classmethod
+    def find_grids(cls, topdir=[], ext='3ds', skip=['blank'], get_data=False):
         # directory crawler: return all files of a given extension
         # in the current and all the nested directories
         from data_xray import nanonisio as nio
@@ -139,8 +143,8 @@ class GetData:
                         grids.append(nio.Grid(fname=addname))
         return grids if get_data else fnames
 
-
-    def FindScans(self, topdir=[], ext='sxm', skip=['blank'],get_data=False):
+    @classmethod
+    def find_scans(cls, topdir=[], ext='sxm', skip=['blank'],get_data=False):
         import pandas as pd
         from data_xray import nanonisio as nio
 
