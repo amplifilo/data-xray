@@ -15,7 +15,7 @@ setup(
     license='LICENSE.txt',
     description='Pythonic cure for the hyperspectral morass',
     long_description=open('README.rst').read(),
-    install_requires=[],
+    install_requires=['tqdm','python-pptx','pyperclip','matplotlib-scalebar','yattag','deepdish','xarray'],
     extras_require = { 'docs': [""],},
     test_suite = "",
     classifiers=[

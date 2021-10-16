@@ -696,7 +696,7 @@ class Spectrum(NanonisFile):
 
         column_names = f.readline().strip('\n').split('\t')
         f.close()
-        print(self.header)
+        
         header_lines = len(self.header) + 4
         specdata = np.genfromtxt(self.fname, delimiter='\t', skip_header=header_lines)
 
