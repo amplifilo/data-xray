@@ -241,7 +241,7 @@ def CrawlDir(topdir=[], ext='sxm'):
                     fn[root] = [addname]
     return fn
 
-def SelectFolder():
+def select_folder():
     import tkinter as tk
     from tkinter import filedialog
 

@@ -23,12 +23,11 @@ def HighLowPass2d(im, type='low', pxwidth=3):
         return im - highp
 
 def SubtractLine(im2, deg=2):
-
     im2, _ = spiepy.flatten_poly_xy(im2/1e-9, deg=deg)
     return im2
 
 
-def PlotImage(_Scan, chan, ax, backw=0, cm='magma',zoom=1, high_pass=None):
+def PlotImage(_Scan, chan, ax, backw=0, cm='magma',zoom=1, high_pass=None, cropped=None):
     #clean up missing vavlues
     from matplotlib.colors import LogNorm
     fb = 'backward' if backw else 'forward'
@@ -38,6 +37,14 @@ def PlotImage(_Scan, chan, ax, backw=0, cm='magma',zoom=1, high_pass=None):
         im2 = im2[cleanrange]
 
     original_size = im2.shape
+
+    if cropped is None:
+        im2 = im2      
+    else:
+        #list needs to be [ymin,ymax,xmin,xmax]
+        im2 = im2[cropped[0]:cropped[1], cropped[2]:cropped[3]]
+  
+
 
     if chan.lower()=='z':
         try:
@@ -91,8 +98,7 @@ def PlotScan(_Scan, chans='all', scanid=0, scandir=2, zoom=1, high_pass=None):
     #     # ppl - means use pyplot interface
     #     # 'fil' - plot ony those with meaningful std (aka data). Std threshdol 1e-2
     #     # the plotter! plots all channels contained in the sxm-dict structure
-    #
-    #
+
     plotted = []
     fn = _Scan.fname
 
