@@ -1,2 +1,9 @@
+tqdm
+python-pptx
+pyperclip
+matplotlib-scalebar
+yattag
+deepdish
+xarray
 
 [docs]

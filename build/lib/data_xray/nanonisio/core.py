@@ -310,7 +310,7 @@ class Grid(NanonisFile):
         ldict = {
         'Vert. Deflection' : 'vd', 'Horiz. Deflection': 'hd', 'Input 8' : 'c', 'Current':'c',\
         'Z': 'z', 'Phase' : 'phi', 'Amplitude' : 'amp', 'Frequency Shift' : 'omega', 'OC D1 X (m)': 'liX',\
-  'OC D1 Y (m)':'liY'}
+  'OC D1 Y (m)':'liY', "LockinX (V)":'liX', "LockinY (V)":'liY'}
 
         try:
             sweep_name = self.header['sweep_signal'].lower().split(' ')[0]
@@ -696,7 +696,7 @@ class Spectrum(NanonisFile):
 
         column_names = f.readline().strip('\n').split('\t')
         f.close()
-        print(self.header)
+        
         header_lines = len(self.header) + 4
         specdata = np.genfromtxt(self.fname, delimiter='\t', skip_header=header_lines)
 

@@ -2,135 +2,147 @@ from data_xray.modules import *
 from .localmodules import *
 
 #this is feature detection in 2D. A bit more evolved than 1D at this point
-
-
 import numpy as np
 
-def HammingWindow2d(im):
-    """Hamming Window"""
-    h = np.hamming(im.shape[0])
-    return np.sqrt(np.outer(h,h))
+class Filter():
+    def __init__(self, im=None):
+        self.im = im
 
-def FFT2d(im):
-    """Retun 2D FFT amplitude"""
-    f = np.fft.fft2(im*HammingWindow2d(im))
-    fshift = np.fft.fftshift(f)
-    return 20*np.log(np.abs(fshift))
+    @staticmethod
+    def fft2d(im):
+        """Retun 2D FFT amplitude"""
+        f = np.fft.fft2(im*Filter.hamming_window_2d(im))
+        fshift = np.fft.fftshift(f)
+        return 20*np.log(np.abs(fshift))
+ 
+    @staticmethod
+    def hamming_window_2d(im):
+        """Hamming Window"""
+        h = np.hamming(im.shape[0])
+        return np.sqrt(np.outer(h,h))
 
-def BinErodePeaks2d(im):
+    @staticmethod
+    def bin_erode_peaks_2d(im):
 
-    """
-    Takes an image and detect the peaks usingthe local maximum filter.
-    Returns a boolean mask of the peaks (i.e. 1 when
-    the pixel's value is the neighborhood maximum, 0 otherwise)
-    """
-
-
-    # define an 8-connected neighborhood
-    neighborhood = generate_binary_structure(2,2)
-
-    #apply the local maximum filter; all pixel of maximal value
-    #in their neighborhood are set to 1
-    local_max = maximum_filter(im, footprint=neighborhood)==im
-    #local_max is a mask that contains the peaks we are
-    #looking for, but also the background.
-    #In order to isolate the peaks we must remove the background from the mask.
-
-    #we create the mask of the background
-    background = (im==0)
-
-    #a little technicality: we must erode the background in order to
-    #successfully subtract it form local_max, otherwise a line will
-    #appear along the background border (artifact of the local maximum filter)
-    eroded_background = binary_erosion(background, structure=neighborhood, border_value=1)
-
-    #we obtain the final mask, containing only peaks,
-    #by removing the background from the local_max mask
-    detected_peaks = local_max - eroded_background
-
-    return detected_peaks
+        """
+        Takes an image and detect the peaks usingthe local maximum filter.
+        Returns a boolean mask of the peaks (i.e. 1 when
+        the pixel's value is the neighborhood maximum, 0 otherwise)
+        """
 
 
-def ImageThreshold(im4):
-    """threshold filter: im is an image"""
+        # define an 8-connected neighborhood
+        neighborhood = generate_binary_structure(2,2)
 
-    try_all_threshold(im4, figsize=(10, 8), verbose=False)
-    plt.show()
+        #apply the local maximum filter; all pixel of maximal value
+        #in their neighborhood are set to 1
+        local_max = maximum_filter(im, footprint=neighborhood)==im
+        #local_max is a mask that contains the peaks we are
+        #looking for, but also the background.
+        #In order to isolate the peaks we must remove the background from the mask.
 
-def ImageThresholdOtsu(im4, plotit=0):
-    """threshold Otsu"""
+        #we create the mask of the background
+        background = (im==0)
 
-    thresh = threshold_otsu(im4) * 24
-    binary = im4 < thresh
-    im_binary = im4 * binary
-    if plotit:
-        fig2, ax2 = plt.subplots(1, 1)
-        img2 = ax2.imshow(-im_binary, cmap=plt.cm.gray)
-        plt.colorbar(img2)
+        #a little technicality: we must erode the background in order to
+        #successfully subtract it form local_max, otherwise a line will
+        #appear along the background border (artifact of the local maximum filter)
+        eroded_background = binary_erosion(background, structure=neighborhood, border_value=1)
+
+        #we obtain the final mask, containing only peaks,
+        #by removing the background from the local_max mask
+        detected_peaks = local_max - eroded_background
+
+        return detected_peaks
+
+    @staticmethod
+    def image_threshold(im):
+        """threshold filter: im is an image"""
+
+        try_all_threshold(im, figsize=(10, 8), verbose=False)
         plt.show()
-    return im_binary
+
+    @staticmethod
+    def image_threshold_otsu(im, plotit=0):
+        """threshold Otsu"""
+
+        thresh = threshold_otsu(im) * 24
+        binary = im < thresh
+        im_binary = im * binary
+        if plotit:
+            fig2, ax2 = plt.subplots(1, 1)
+            img2 = ax2.imshow(-im_binary, cmap=plt.cm.gray)
+            plt.colorbar(img2)
+            plt.show()
+        return im_binary
+
+    @staticmethod
+    def image_distance_transform(im_binary):
+        """Image Distance Transform"""
+
+        distance = ndi.distance_transform_edt(-im_binary)
+        local_maxi = peak_local_max(distance, indices=False, footprint=np.ones((3, 3)))
+        markers = ndi.label(local_maxi)[0]
+        labels = watershed(-distance, markers, mask=imb)
+        return labels
 
 
-def ImageDistanceTransform(im_binary):
-    """Image Distance Transform"""
+class BlobFinder():
 
-    distance = ndi.distance_transform_edt(-im_binary)
-    local_maxi = peak_local_max(distance, indices=False, footprint=np.ones((3, 3)))
-    markers = ndi.label(local_maxi)[0]
-    labels = watershed(-distance, markers, mask=imb)
-    return labels
+    def __init__(self):
+        pass
 
+    @staticmethod
+    def image_find_blobs(im, max_sigma, min_sigma, threshold):
+        """
+        alternative
+        blobs_log = blob_log(im4, max_sigma=7, num_sigma=2, threshold=2)
+        Compute radii in the 3rd column.
+        blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
 
-def ImageFindBlobs(im, max_sigma, min_sigma, threshold):
-    """
-    alternative
-    blobs_log = blob_log(im4, max_sigma=7, num_sigma=2, threshold=2)
-    Compute radii in the 3rd column.
-    blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
+        pretty good particle finder using blob_dog function from scikit
 
-    pretty good particle finder using blob_dog function from scikit
+        """
+        try:
+            blobs_dog = blob_dog(im, max_sigma=max_sigma, min_sigma=min_sigma, threshold=threshold)
 
-    """
-    try:
-        blobs_dog = blob_dog(im, max_sigma=max_sigma, min_sigma=min_sigma, threshold=threshold)
+            if len(blobs_dog):
+                blobs_dog[:, 2] = blobs_dog[:, 2] * np.sqrt(2)
+                sz = np.asarray([[i[2], im[int(i[0]),int(i[1])]] for i in blobs_dog])
+                #nclust = kmeans_core(sz,2)
 
-        if len(blobs_dog):
-            blobs_dog[:, 2] = blobs_dog[:, 2] * np.sqrt(2)
-            sz = np.asarray([[i[2], im[int(i[0]),int(i[1])]] for i in blobs_dog])
-            #nclust = kmeans_core(sz,2)
+                fig,ax = plt.subplots(1, 1, figsize=(6,6), dpi=100)
+                climit = [np.median(im) - 3*np.std(im), np.median(im) + 3*np.std(im)]
+                ax.imshow(im, cmap = plt.cm.gray, interpolation='nearest', clim=climit )
 
-            fig,ax = plt.subplots(1, 1, figsize=(6,6), dpi=100)
-            climit = [np.median(im) - 3*np.std(im), np.median(im) + 3*np.std(im)]
-            ax.imshow(im, cmap = plt.cm.gray, interpolation='nearest', clim=climit )
+                for j in np.arange(blobs_dog.shape[0]):
+                #if nclust[j] == 1:
+                    y, x, r = blobs_dog[j]
+                    ax.plot(x,y,'r.')
+                ax.axis('tight')
+                ax.set_aspect('equal')
 
-            for j in np.arange(blobs_dog.shape[0]):
-               #if nclust[j] == 1:
-                y, x, r = blobs_dog[j]
-                ax.plot(x,y,'r.')
-            ax.axis('tight')
-            ax.set_aspect('equal')
+            else:
+                print('check params')
 
-        else:
-            print('check params')
+            #return blobs_dog
+        except ValueError:
+            print("need to check those params")
 
-        #return blobs_dog
-    except ValueError:
-        print("need to check those params")
+    @staticmethod
+    def get_blob_props(im, blobs_dog):
+        """
+        read-out function for the blob properties
+        :param im:
+        :param blobs_dog:
+        :return:
+        """
 
-
-def GetBlobProps(im, blobs_dog):
-    """
-    read-out function for the blob properties
-    :param im:
-    :param blobs_dog:
-    :return:
-    """
-
-    try:
-        params = list(blobs_dog.widget.kwargs.values())[1:]
-        return blob_dog(im, max_sigma=params[0], min_sigma=params[1], threshold=params[2])
-    except ValueError:
-        print("need to check those params")
+        try:
+            params = list(blobs_dog.widget.kwargs.values())[1:]
+            return blob_dog(im, max_sigma=params[0], min_sigma=params[1], threshold=params[2])
+        except ValueError:
+            print("need to check those params")
 
 
 def VoronoiTesselation(pts, radius=None):

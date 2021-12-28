@@ -4,7 +4,7 @@ from ..modules import *
 
 ##this is the new version working with xarray dataset
 from plotly import tools
-from tqdm import tqdm
+#from tqdm import tqdm
 
 #list of functions for image analysis
 def AxesColorLimits(arr2d):

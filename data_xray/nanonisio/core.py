@@ -256,7 +256,7 @@ class Grid(NanonisFile):
                     mls = self.header['segments'].split(';')
                     for mj, j in enumerate(mls):
                         mv = [float(m) for m in j.split(',')]
-                        vec = np.linspace(start=mv[0], stop=mv[1], num=mv[-1], dtype='float')
+                        vec = np.linspace(start=mv[0], stop=mv[1], num=int(mv[-1]), dtype='float')
                         v.append(vec[:-1] if mj < len(mls) - 1 else vec)
                     self.v_raw = v #this is just to keep track of branches
 

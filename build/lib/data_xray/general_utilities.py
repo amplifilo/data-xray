@@ -8,6 +8,32 @@ Created on Thu Dec 15 10:37:38 2016
 from .modules import *
 import pandas as pd
 
+
+def NiceFig(font=16):
+    import matplotlib as mpl
+    mpl.rcParams['font.size'] = font
+    
+    '''
+    The default figure size is (6.4, 4.8) inches in matplotlib. Default dpi is 100.
+
+    figsize=(15,7.5), dpi= 80
+    figsize=(12,6)  , dpi=100
+    figsize=( 8,4)  , dpi=150
+    figsize=( 6,3)  , dpi=200
+
+    On the other hand, changing the dpi scales those elements. 
+    At 72 dpi, a line of 1 point size is one pixel strong. At 144 dpi, this line is 2 pixels strong. 
+    A larger dpi will therefore act like a magnifying glass. All elements are scaled by the magnifying power of the lens.
+    
+    This is determined by the size of the elements inside the figure. Most elements like lines, markers, texts have a size given in points.
+    Matplotlib figures use Points per inch (ppi) of 72. A line with thickness 1 point will be 1./72. inch wide. A text with fontsize 12 points will be 12./72. inch heigh.
+
+    Of course if you change the figure size in inches, points will not change, so a larger 
+    figure in inches still has the same size of the elements. Changing the figure size is thus 
+    like taking a piece of paper of a different size. Doing so, would of course not change the width of the line drawn with the same pen.
+    
+    '''
+
 def p_or(vvec,but=[0,0]):
     b1 = vvec < but[0]
     b2 = vvec > but[1]
@@ -82,6 +108,7 @@ def strSetXor(str1, str2):
 def darkPlot():
     sns.set(style="ticks", context="talk")
     plt.style.use("dark_background")
+
 
 
 nonecheck = lambda x: '' if x is None else x
