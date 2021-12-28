@@ -3,7 +3,7 @@ from ..modules import *
 #####SXM IMAGE FILES
 
 ##this is the new version working with xarray dataset
-from plotly import tools
+#from plotly import tools
 from tqdm import tqdm
 
 #list of functions for image analysis

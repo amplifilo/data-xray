@@ -11,13 +11,14 @@ from ..general_utilities import *
 # from nanonis_io import *
 # from nanonis_plotutils import *
 import matplotlib.gridspec as gridspec
-import holoviews as hv
 
 def PlotRanger(df, nsigma = 1):
     dat = df/df.mean()
     return [np.float(v) for v in [dat.mean()- nsigma*dat.std(),dat.mean()+nsigma*dat.std()]]
 
 def XarrayToHviews(darr):
+    import holoviews as hv
+
     """
     #converts xarray DataArray object to HoloViews Dataset
 
