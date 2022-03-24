@@ -17,9 +17,10 @@ class Filter():
  
     @staticmethod
     def hamming_window_2d(im):
-        """Hamming Window"""
-        h = np.hamming(im.shape[0])
-        return np.sqrt(np.outer(h,h))
+        """Hamming Window for arbitrary aspect ratio"""
+        hx = np.hamming(im.shape[0])
+        hy = np.hamming(im.shape[1])
+        return np.sqrt(np.outer(hx,hy))
 
     @staticmethod
     def bin_erode_peaks_2d(im):

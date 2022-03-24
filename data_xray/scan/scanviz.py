@@ -23,13 +23,29 @@ def HighLowPass2d(im, type='low', pxwidth=3):
         return im - highp
 
 def SubtractLine(im2, deg=2):
-    im2, _ = spiepy.flatten_poly_xy(im2/1e-9, deg=deg)
-    return im2
+    
+    (s1,s2) = im2.shape
+    Y = im2/1e-9
 
+    X1, X2 = np.mgrid[:s1, :s2]
+    X = np.hstack((np.reshape(X1, (s1*s2, 1)) , np.reshape(X2, (s1*s2, 1))))
+    X = np.hstack((np.ones((s1*s2, 1)), X))
+
+    YY = np.reshape(Y, (s1*s2, 1))
+    theta = np.dot(np.dot(np.linalg.pinv(np.dot(X.transpose(), X)), X.transpose()), YY)
+    plane = np.reshape(np.dot(X, theta), (s1, s2));
+
+    return Y - plane
+
+    #Y_sub = Y - plane
+
+    #im2, _ = spiepy.flatten_poly_xy(im2/1e-9, deg=deg)
+    
 
 def PlotImage(_Scan, chan, ax, backw=0, cm='magma',zoom=1, high_pass=None, cropped=None):
-    #clean up missing vavlues
-    from matplotlib.colors import LogNorm
+    
+    #from matplotlib.colors import LogNorm
+    
     fb = 'backward' if backw else 'forward'
     im2 = _Scan.signals[chan][fb]
     if np.any(np.isnan(im2)):
@@ -44,8 +60,6 @@ def PlotImage(_Scan, chan, ax, backw=0, cm='magma',zoom=1, high_pass=None, cropp
         #list needs to be [ymin,ymax,xmin,xmax]
         im2 = im2[cropped[0]:cropped[1], cropped[2]:cropped[3]]
   
-
-
     if chan.lower()=='z':
         try:
             if high_pass is not None:
@@ -57,35 +71,45 @@ def PlotImage(_Scan, chan, ax, backw=0, cm='magma',zoom=1, high_pass=None, cropp
         except:
             print('problems subtracting background in ' + _Scan.fname)
             im2 = im2
-    scale = _Scan.header['scan_range']/_Scan.header['scan_pixels']
-    stat = [np.mean(im2), np.mean([np.std(im2 / np.max(im2)), np.std(im2 / np.min(im2))])]
-    color_range = [stat[0] - 3 * stat[1], stat[0] + 3 * stat[1]]
+    #scale = _Scan.header['scan_range']/_Scan.header['scan_pixels']
+    #stat = [np.mean(im2), np.mean([np.std(im2 / np.max(im2)), np.std(im2 / np.min(im2))])]
+    #color_range = [stat[0] - 3 * stat[1], stat[0] + 3 * stat[1]]
     #im2 = (im2 - np.min(im2))/(np.max(im2)-np.min(im2))
     im2 = (im2 - np.min(im2))# / (np.max(im2) - np.min(im2))
     im2 = im2/np.max(im2)
 
     if zoom != 1:
          im2 = ndimage.zoom(im2,zoom=zoom,order=3)
+    
 
-    if backw:
-        ax.imshow(np.fliplr(im2), cmap=cm, norm=LogNorm(vmin=0.05, vmax=1.1));
-    else:
-        ax.imshow(im2, cmap=cm, norm=LogNorm(vmin=0.05, vmax=1.1));
+    if backw:    
+        im2 = np.fliplr(im2)
+        
+    if _Scan.ds.attrs['scan_dir'] == 'up':
+        im2 = np.flipud(im2)
 
+        #ax.imshow(np.fliplr(im2), cmap=cm, norm=LogNorm(vmin=0.05, vmax=1.1));
 
+        #im2_plot = ax.imshow(np.fliplr(im2), cmap=pplt.Colormap(cm), robust=True)
+        
+        #ax.imshow(np.fliplr(im2), cmap=cm, norm=LogNorm(vmin=0.05, vmax=1.1));
+        
+        
+    im2_plot = ax.imshow(im2, cmap=pplt.Colormap(cm), robust=True);
+
+    ax.colorbar(im2_plot,loc='b')
     scale_unit = np.min([i / j for i, j in zip(_Scan.header['scan_range'], original_size)])
-
     sbar = ScaleBar(scale_unit, location='upper right', font_properties={'size': 8})
-
-    fp = sbar.get_font_properties()
-    fp.set_size(8)
-    #ax.axes([0.08, 0.08, 0.94 - 0.08, 0.94 - 0.08])  # [left, bottom, width, height]
-    #ax.axis('scaled')
     ax.add_artist(sbar)
     ax.set_title(chan+' '+ fb, fontsize=8)
+    ax.axis('off')
+    
+    #fp = sbar.get_font_properties()
+    #fp.set_size(8)
+    #ax.axes([0.08, 0.08, 0.94 - 0.08, 0.94 - 0.08])  # [left, bottom, width, height]
+    #ax.axis('scaled')
     # ax.set_title(phdf+j)
     # ax.set_title('$'+j+'$')
-    ax.set_axis_off()
     return im2
 
 

@@ -8,6 +8,7 @@ Created on Wed Jan 11 18:31:02 2017
 
 import numpy as np
 import deepdish as dd
+import proplot as pplt
 from copy import copy
 
 import pandas as pd
@@ -63,9 +64,9 @@ from scipy import constants as C
 
 
 
-import matplotlib.gridspec as gridspec
-from matplotlib import pyplot as plt
-from matplotlib.figure import Figure
+#import matplotlib.gridspec as gridspec
+#from matplotlib import pyplot as plt
+#from matplotlib.figure import Figure
 
 import fnmatch
 import pyperclip

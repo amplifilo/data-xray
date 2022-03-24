@@ -1,5 +1,6 @@
 from ..scan import PlotImage
 from ..grid import *
+from ..nanonisio import Scan
 import numpy as np
 from pptx import Presentation
 from pptx.util import Inches
@@ -42,13 +43,14 @@ class SummaryPPT(object):
 
     def insert_data(self):
         for fj in self.fdict:
-            if re.findall('sxm', fj.fname):
+            if re.findall('sxm', fj.header['fname']):
                 try:
+                    s_d = Scan(fj.header['fname'], header_only=False)
                     if self.chanselect == "Automatic":
                         # attempt to recognize good data
                         plotsignals = []
-                        for c in fj.signals.keys():
-                            sig = fj.signals[c]['forward']
+                        for c in s_d.signals.keys():
+                            sig = s_d.signals[c]['forward']
                             sig = sig[~np.isnan(sig)]
                             if meanstd(sig) > 2:
                                 plotsignals.append(c)
@@ -58,31 +60,36 @@ class SummaryPPT(object):
                     else:
                         plotsignals = self.chanselect['scan']
 
+                    #figure out if channels are actually present
+                    plotsignals = [p for p in plotsignals if p in s_d.signals.keys()]
+                    print(plotsignals)
+
                     nrows = 2 if len(plotsignals) > 2 else 1
                     ncols = int(np.ceil(len(plotsignals) / nrows))
                     f3, a3 = plt.subplots(nrows, ncols);
                     if a3 is not list:
                         a3 = [a3]
                     for c, a in zip(plotsignals, np.ravel(a3)):
-                        PlotImage(fj, chan=c, ax=a, high_pass=None);
+                        PlotImage(s_d, chan=c, ax=a, high_pass=None);
 
                     [a.axis('off') for a in np.ravel(a3)]
 
                     xy = ['X', 'Y']
-                    offset = fj.header['scan_offset'] / 1e-9
+                    offset = s_d.header['scan_offset'] / 1e-9
                     xyoffsets = [xy[j] + '=' + str(np.round(offset[j], 2)) + ' nm ' for j in [0, 1]]
 
-                    titleString = [fj.fname]
-                    titleString.append('Bias: ' + str(fj.header['bias']) + 'V')
-                    titleString.append('Control: ' + fj.header['z-controller']['Name'][0])
+                    titleString = [s_d.fname]
+                    titleString.append('Bias: ' + str(s_d.header['bias']) + 'V')
+                    titleString.append('Control: ' + s_d.header['z-controller']['Name'][0])
                     titleString.append('Offsets: ' + xyoffsets[0] + xyoffsets[1])
-                    titleString.append('Resolution: ' + str(fj.header['scan_pixels']))
+                    titleString.append('Resolution: ' + str(s_d.header['scan_pixels']))
 
                     self.fig_to_ppt([f3], leftop=[1, 2], txt=titleString)
-                    print(os.path.basename(fj.ds.fname) + ' imported')
+                    print(os.path.basename(s_d.ds.fname) + ' imported')
                     f3.clf();  # close figure so that it doesn't clog up in the end
+                    del s_d;
                 except:
-                    print(os.path.basename(fj.fname) + ' failed')
+                    print(os.path.basename(fj.header['fname']) + ' failed')
 
             elif re.findall('3ds', fj.fname):
                 try:
