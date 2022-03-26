@@ -1,8 +1,7 @@
 Metadata-Version: 2.1
 Name: data-xray
-Version: 0.5.1
+Version: 0.5.3
 Summary: Pythonic cure for the hyperspectral morass
-Home-page: UNKNOWN
 Author: Petro Maksymovych
 Author-email: pmax20@gmail.com
 Maintainer: Petro Maksymovych

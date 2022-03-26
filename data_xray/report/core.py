@@ -11,6 +11,7 @@ import pandas as pd
 #some utilies to work with powerpoint
 meanstd = lambda arr: np.std(np.ravel(arr)/np.mean(np.ravel(arr)))
 
+
 class SummaryPPT(object):
     #group-sequences selects sequential images with group_sequences images of the same area (like sequential slides)
     def __init__(self, pname="image_summary", new=False, fdict=None, group_sequences = False, maximages=50, chanselect = {'scan':'Z', 'grid':'cf'}, **kwargs):
@@ -341,3 +342,127 @@ class SummaryPPT(object):
                 font.size = Pt(12)    
                 #    p.text = t
                 p = text_frame.add_paragraph()
+
+
+
+class QuickPPT(object):
+#similar to SummaryPPT, but now decoupled from specific 
+# data types. Designed to be a catch-all, python -> ppt tool.
+# Todo: update SummaryPPT to utolize QuickPPT constructs.
+#     
+    def __init__(self, presentation_name):
+        self.presentation_name = presentation_name
+        self.init_ppt()
+
+    def init_ppt(self):
+        pres = Presentation()
+        pres.notes_master.name = self.presentation_name
+        self.pres = pres
+
+
+    def png_to_ppt(self, pngfile, ttl = []):
+       """
+       Plop a PNG file into powerpoint slide
+       :param pngfile:
+       :param pres:
+       :param ttl:
+       :return:
+       """
+
+       #blank_slide_layout = pres.slide_layouts[6]
+       title_slide_layout = self.pres.slide_layouts[9]
+
+       left = top = Inches(1)
+
+       slide = self.pres.slides.add_slide(title_slide_layout)
+       slide.shapes.add_picture(pngfile, left, top)
+       subtitle = slide.placeholders[1]
+       title = slide.shapes.title
+       if len(ttl):
+           subtitle.text = ttl
+
+    def pplt_to_ppt(self, figs, leftop=[[0,1.2]], txt=None):
+        """
+        Plop figures into powerpoint
+        :param figs:
+        :param pres:
+        :param leftop:
+        :param txt:
+        :return:
+        """
+        #savepptx needs to be a full path. If None is provided the default presentation
+        #will be created with a name sum1.pptx in the current folder
+        from pptx.util import Inches
+
+        blank_slide_layout = self.pres.slide_layouts[5]
+        slide = self.pres.slides.add_slide(blank_slide_layout)
+        
+        
+        tmp_path = 't1.png'
+        for figp, figoffset in zip(figs, leftop):
+            left = Inches(figoffset[0])
+            top = Inches(figoffset[1])
+            
+            figp.savefig(tmp_path, transparent=1, format='png', dpi=300)
+            slide.shapes.add_picture(tmp_path, left, top)
+
+        if txt is not None:
+            self.text_to_slide(txt, slide=slide)
+
+    def text_to_slide(self, txt, slide=None): #lets make txt a list of strings
+                                              
+        """
+        convert text to slide
+
+        :param txt: list of strings
+        :param pres:
+        :param slide:
+        :return:
+        """
+        from pptx.util import Pt
+        #title = slide.shapes.title
+        #subtitle = slide.placeholders[1]
+
+       # title.text = "Hello, World!"
+        #subtitle.text = "python-pptx was here!"
+
+       # prs.save('test.pptx')
+
+        from pptx.util import Inches
+
+        if self.pres == None:
+            print('please init presentation')
+        else:
+            if slide is None:
+                bullet_slide_layout = self.pres.slide_layouts[5]
+                slide = self.pres.slides.add_slide(bullet_slide_layout)
+
+            shapes = slide.shapes
+
+            countshapes = 0
+
+            #just catch the first shape object with a frame in it
+            for shape in slide.shapes:
+                if not shape.has_text_frame:
+                    continue
+                elif countshapes > 0:
+                    tframe = shape.text_frame
+                    tframe.clear()
+                    #print('caught one')
+                else:
+                    text_frame = shape.text_frame
+                    text_frame.clear()
+                    countshapes = 1
+
+            text_frame.clear()
+            p = text_frame.paragraphs[0]
+            
+            for t in txt:
+                run = p.add_run()
+                run.text = t
+
+                font = run.font
+                font.name = 'Calibri'
+                font.size = Pt(12)    
+                #    p.text = t
+                p = text_frame.add_paragraph()     

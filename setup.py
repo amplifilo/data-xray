@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='data_xray',
-    version='0.5.1',
+    version='0.5.3',
     author='Petro Maksymovych',
     author_email='pmax20@gmail.com',
     maintainer='Petro Maksymovych',
