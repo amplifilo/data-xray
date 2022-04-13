@@ -42,13 +42,7 @@ from sklearn.gaussian_process.kernels import Matern, WhiteKernel
 
 #
 from yattag import Doc
-from yattag import Doc
 #from pyearth import Earth
-
-
-
-from pptx import Presentation
-from pptx.util import Inches
 
 #
 from scipy import ndimage
@@ -73,5 +67,5 @@ import pyperclip
 import xarray as xry
 
 
-import spiepy
+#import spiepy
 from matplotlib_scalebar.scalebar import ScaleBar

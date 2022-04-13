@@ -161,34 +161,38 @@ class Grid(NanonisFile):
     """
 
     def __init__(self, fname=None, fromcdf=None, savecdf=0, header_only=False):
-        print(fname)
+       
         if fromcdf is None:
-            _is_valid_file(fname, ext='3ds')
-            super().__init__(fname)
-            self._parse_3ds_header(self.header_raw)
-            if header_only:
-                return
-            self.signals = self._load_data()
-            swpp = self._derive_sweep_signal()
-            
-            if swpp is None:
-                print(fname + " failed")
-                return
-            else:
-                self.signals['sweep_signal'] = swpp
-            self.signals['topo'] = self._extract_topo()
-            if savecdf:
-                self._build_xarray(savecdf=fname[:-3] + 'nc')
-            else:
-                self._build_xarray(savecdf=None)
-            self.name = fname
+            #try:
+                _is_valid_file(fname, ext='3ds')
+                super().__init__(fname)
+                self._parse_3ds_header(self.header_raw)
+                if header_only:
+                    return
+                self.signals = self._load_data()
+                swpp = self._derive_sweep_signal()
+                
+                if swpp is None:
+                    print(fname + " failed")
+                    return
+                else:
+                    self.signals['sweep_signal'] = swpp
+                self.signals['topo'] = self._extract_topo()
+                if savecdf:
+                    self._build_xarray(savecdf=fname[:-3] + 'nc')
+                else:
+                    self._build_xarray(savecdf=None)
+                self.name = fname
 
-            self.ncdf_name = fname[:-3] + 'nc'
+                self.ncdf_name = fname[:-3] + 'nc'
 
-            print(fname + " imported")
-        else:
-            self.ds = xr.open_dataset(fromcdf)
-            self.ncdf_name = self.ds.cdf
+                print(fname + " imported")
+            #except:
+                print("reading " + fname + " failed")
+                return None
+        #else:
+        #    self.ds = xr.open_dataset(fromcdf)
+        #    self.ncdf_name = self.ds.cdf
 
     def _load_data(self):
         """
@@ -312,7 +316,8 @@ class Grid(NanonisFile):
         ldict = {
         'Vert. Deflection' : 'vd', 'Horiz. Deflection': 'hd', 'Input 8' : 'c', 'Current':'c',\
         'Z': 'z', 'Phase' : 'phi', 'Amplitude' : 'amp', 'Frequency Shift' : 'omega', 'OC D1 X (m)': 'liX',\
-  'OC D1 Y (m)':'liY', "LockinX (V)":'liX', "LockinY (V)":'liY'}
+  'OC D1 Y (m)':'liY', "LockinX (V)":'liX', "LockinY (V)":'liY',\
+      'Femto': 'c'}
 
         try:
             sweep_name = self.header['sweep_signal'].lower().split(' ')[0]
