@@ -7,6 +7,77 @@ from ..modules import *
 #from tqdm import tqdm
 
 #list of functions for image analysis
+
+class ScanViz(object):
+    def __init__(self, scan_object):
+        try:
+            self.scan = scan_object
+        except:
+            print("can't find xarrayed image")
+            return
+    
+    def get_image(self, chan, backw=0):
+    
+        fb = 'backward' if backw else 'forward'
+        self.fb = fb
+
+        im2 = self.scan.signals[chan][fb]
+        if np.any(np.isnan(im2)):
+            cleanrange = np.setxor1d(np.arange(np.size(im2, 0)), np.unique(np.where(np.isnan(im2))[0]))
+            im2 = im2[cleanrange]
+
+        self.original_size = im2.shape
+
+        im2 = (im2 - np.min(im2))# / (np.max(im2) - np.min(im2))
+        im2 = im2/np.max(im2)
+
+        if backw:    
+            im2 = np.fliplr(im2)
+
+        if self.scan.header['scan_dir'] == 'up':
+            im2 = np.flipud(im2)   
+        
+        self.original_image = im2
+        self.image = im2
+        self.chan = chan
+        return self
+    
+
+    def crop(self, cropped):
+        #list needs to be [ymin,ymax,xmin,xmax]
+        self.image = self.image[cropped[0]:cropped[1], cropped[2]:cropped[3]]
+        return self
+
+    def high_pass(self, high_pass):
+        #list needs to be [ymin,ymax,xmin,xmax]
+        
+        im2 = HighLowPass2d(self.image.shape, type='high', pxwidth=high_pass)
+        crop = 2*high_pass
+        self.image = im2[crop:-crop,crop:-crop] #crop the edges
+        return self
+
+    def line_subtract(self):
+        self.image = SubtractLine(self.image)
+        return self
+    
+    def zoom(self, zoom):
+        self.image = ndimage.zoom(im2,zoom=zoom,order=3)
+        return self
+        
+    def plot_image(self, ax, cm='magma'):
+
+        im2_plot = ax.imshow(self.image, cmap=pplt.Colormap(cm), robust=True);
+
+        ax.colorbar(im2_plot,loc='b')
+        scale_unit = np.min([i / j for i, j in zip(self.scan.header['scan_range'], self.original_size)])
+        sbar = ScaleBar(scale_unit, location='upper right', font_properties={'size': 8})
+        ax.add_artist(sbar)
+        ax.set_title(self.chan+' '+ self.fb, fontsize=8)
+        ax.axis('off')
+
+        return self
+        
+
 def AxesColorLimits(arr2d):
     return [np.mean(arr2d) - 3*np.std(arr2d/np.max(arr2d)),np.mean(arr2d) + 3*np.std(arr2d/np.max(arr2d))]
 

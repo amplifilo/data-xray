@@ -359,6 +359,8 @@ class QuickPPT(object):
         pres.notes_master.name = self.presentation_name
         self.pres = pres
 
+    def save(self):
+        self.pres.save(self.presentation_name)
 
     def png_to_ppt(self, pngfile, ttl = []):
        """
