@@ -30,6 +30,7 @@ the file system and data summarization in Powerpoint files
 Data-Xray draws upon many truly excellent python libraries, 
 for which we as developers are phenomenally greatful.
 
+********************
 Installation / Setup
 ********************
 
@@ -37,9 +38,9 @@ Please pip install directly from git
 
 pip install git+https://github.com/amplifilo/data-xray.git
 
-**Testing**
 
 
+*************
 Documentation
 *************
 
@@ -58,15 +59,14 @@ data-xray.viz for shared visualization functions
 
 Updates to data-xray happen frequently, with likely breaks in code organization.
 
-Help!
-*****
-
+*******
 License
 *******
 
 data-xray is licensed under the Apache 2.0 license. See ``LICENSE.txt`` for
 more details.
 
+**********
 Contribute
 **********
 
