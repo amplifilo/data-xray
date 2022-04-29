@@ -1,7 +1,7 @@
-#sourced from nanonispy by underchemist
+#originally sourced from nanonispy by underchemist
 #modified by Petro Maksymovych to: (1) make context aware header parser;
-#                                   (2) package data to xarray
-#final modification October 15, 2017
+#                                   (2)package data to xarray
+#
 
 # from ..modules import *
 import os
