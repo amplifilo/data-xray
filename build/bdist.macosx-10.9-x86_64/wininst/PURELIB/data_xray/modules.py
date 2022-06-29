@@ -72,5 +72,5 @@ import pyperclip
 import xarray as xry
 
 
-import spiepy
+#import spiepy
 from matplotlib_scalebar.scalebar import ScaleBar
