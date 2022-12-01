@@ -465,6 +465,6 @@ class QuickPPT(object):
 
                 font = run.font
                 font.name = 'Calibri'
-                font.size = Pt(12)    
+                font.size = Pt(14)
                 #    p.text = t
                 p = text_frame.add_paragraph()     

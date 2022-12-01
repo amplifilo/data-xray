@@ -41,12 +41,16 @@ data_xray/cluster/__pycache__/core.cpython-38.pyc
 data_xray/devel/__init__.py
 data_xray/devel/dnd.py
 data_xray/devel/legacy.py
+data_xray/devel/cl/__init__.py
+data_xray/devel/cl/core.py
 data_xray/devel/dashviz/__init__.py
 data_xray/devel/dashviz/test.py
 data_xray/devel/fileio/__init__.py
 data_xray/devel/fileio/gui_fname.py
 data_xray/devel/htmldx/__init__.py
 data_xray/devel/htmldx/core.py
+data_xray/devel/ncar/__init__.py
+data_xray/devel/ncar/core.py
 data_xray/grid/__init__.py
 data_xray/grid/dsops.py
 data_xray/grid/gridviz.py
