@@ -731,9 +731,15 @@ class Spectrum(NanonisFile):
         header_entries = header_raw.split('\r\n')
         header_entries = header_entries[:-3]
         header_dict = dict()
+
+
         for entry in header_entries:
-            key, val, _ = entry.split('\t')
-            header_dict[key] = val
+
+                splits = entry.split('\t')
+                if len(splits) >= 2:
+                    header_dict[splits[0]] = splits[1]
+                # except:
+                #     print("issue parsing header")
 
         return header_dict
 

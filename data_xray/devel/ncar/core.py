@@ -10,6 +10,7 @@ from sklearn.gaussian_process.kernels import WhiteKernel, ExpSineSquared, RBF
 from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
 import proplot as pplt
+import re
 
 from pptx import Presentation
 from pptx.util import Inches
@@ -28,7 +29,15 @@ class SinglePointXarray():
         self.zarr = zarr = (zarr - np.min(zarr))
         self.varr = varr = np.mean([s["bias"] for s in spectra], axis=0)/1e-3
 
+        for _is, s in enumerate(spectra):
+            try:
+                s["i"]
+            except:
+                print("problem with " + str(_is))
+                return
+            
         iarr = np.asarray([s["i"] for s in spectra])
+
         self.iarr = iarr = iarr/1e-9
 
         if 'di' in spectra[0].keys():
@@ -80,7 +89,6 @@ class SinglePointXarray():
                 _data[key] = _d
 
         return _data
-
 
 class DatGridXarray():
     "this is to pack a bunch of dat files, each of which as multiple runs and the [AVG] field"
@@ -134,7 +142,6 @@ class DatGridXarray():
         )
 
         return d2r
-
 
 class AndreevSlopes:
 
@@ -254,7 +261,6 @@ class AndreevSlopes:
         # 5. Total variational derivative with regularization set to 0.01
         result5 = dxdt(x, t, kind="trend_filtered", order=0, alpha=1e-2)
 
-
 class AndreevPlots:
     def __init__(self, datdict):
         self.src = AndreevSlopes(datdict);
@@ -264,7 +270,6 @@ class AndreevPlots:
         f2, a2 = plt.subplots(1, 1);
         a2.plot(*args, **kwargs);
         return f2
-
 
 class AndreeSlopesGrid:
     def __init__(self):
@@ -302,7 +307,89 @@ class AndreeSlopesGrid:
 
         return ivz
 
+class Ncar_Set(object):
+    
+    def __init__(self, _set, ref = 2, init = 4, sym = False):
+        self.source = _set
+        self.div = self.source.di.data*1e10
+        if sym:
+            self.divsym = np.mean([self.div, np.fliplr(self.div)],axis=0)
+            self.divasym = np.mean([self.div, -np.fliplr(self.div)],axis=0)
 
+    def plot(self, src = 'div', ref = 2, init=4):
+
+        _div = self.__dict__[src]
+        v = self.source.v
+
+        nspec = np.arange(len(self.div[init:]))
+        plum_cycle = pplt.Cycle("viridis",len(nspec),lw=1.5)
+
+        f2,a2 = pplt.subplots(refwidth=2.6, ncols=2, nrows=2, sharey=False, refaspect=1.4)
+        for iv in _div[init:]:
+            a2[0].semilogy(v,iv,cycle=plum_cycle)
+            a2[0].set_xlabel("bias (mv)")
+            a2[0].set_ylabel("didv",labelpad=-5)
+
+        evec = [(np.log(aa)-np.log(_div[ref])+1) for aa in _div[init:]]
+
+        evec_norm = [_e/np.mean(_e[0:10]) for _e in evec[3:]]
+
+        for ee in evec:
+            a2[1].plot(v, ee/np.mean(ee[-20:]),cycle=plum_cycle)
+            a2[1].set_xlabel("bias (mv)")
+            a2[1].set_ylabel(r"$\kappa / \kappa_{N}$")
+
+        a2[1].set_ylim([.9*np.min(np.array(evec_norm)),1.1*np.max(np.array(evec_norm))])
+
+
+        _tv = a2[2].imshow(np.array(evec_norm),cmap="balance",extent=[v[0],v[-1],len(_div),1],aspect=np.max(v)/(len(_div)-1))
+        _cbar = a2[2].colorbar(_tv, title=r"$\kappa / \kappa_{N}$")
+
+        for ee in evec:
+            a2[3].plot(v, ee,cycle=plum_cycle)
+            a2[3].set_xlabel("bias (mv)")
+            a2[3].set_ylabel(r"$\kappa$")
+
+        return f2
+
+    def plot_differential(self, src = 'div', init=6, delta=5):
+
+        _div = self.__dict__[src]
+        v = self.source.v
+
+        nspec = np.arange(len(self.div[init:]))
+        plum_cycle = pplt.Cycle("viridis",len(nspec),lw=1.5)
+
+        f2,a2 = pplt.subplots(refwidth=2.6, ncols=2, nrows=2, sharey=False, refaspect=1.4)
+        for iv in _div[init:]:
+            a2[0].semilogy(v,iv,cycle=plum_cycle)
+            a2[0].set_xlabel("bias (mv)")
+            a2[0].set_ylabel("didv",labelpad=-5)
+
+        evec = [(np.log(_div[_id])-np.log(_div[_id-delta])+1) for _id in np.arange(init,len(_div),1)]
+
+        evec_norm = [_e/np.mean(_e[0:10]) for _e in evec[3:]]
+
+        for ee in evec:
+            a2[1].plot(v, ee/np.mean(ee[0:10])+1,cycle=plum_cycle)
+            a2[1].set_xlabel("bias (mv)")
+            a2[1].set_ylabel(r"$\kappa / \kappa_{N}$")
+        a2[1].set_ylim([.9*np.min(np.array(evec_norm)),1.1*np.max(np.array(evec_norm))])
+
+
+
+
+        _tv = a2[2].imshow(np.array(evec_norm),cmap="balance",extent=[v[0],v[-1],len(_div),1],aspect=np.max(v)/(len(_div)-1))
+        _cbar = a2[2].colorbar(_tv, title=r"$\kappa / \kappa_{N}$")
+
+        for ee in evec:
+            a2[3].plot(v, ee,cycle=plum_cycle)
+            a2[3].set_xlabel("bias (mv)")
+            a2[3].set_ylabel(r"$\kappa$")
+
+        return f2
+    
+    
 def slope_peek(spectra):
     try:
         ds1 = AndreevSlopes(datdict=spectra).FitGaussProcess().FitAndreevSlopes()

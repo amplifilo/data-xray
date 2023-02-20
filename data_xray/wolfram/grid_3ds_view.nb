@@ -1,0 +1,50 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 13.1' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      1171,         40]
+NotebookOptionsPosition[       826,         26]
+NotebookOutlinePosition[      1221,         42]
+CellTagsIndexPosition[      1178,         39]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData["\"\</Users/5nm/Dropbox (ORNL)/JSTM/Data-JTSTM/2021-07-15 FeSe \
+defects dIdV maps/20210718_Subgrid_001.3ds\>\""], "Input",
+ CellChangeTimes->{{3.8819258130487127`*^9, 
+  3.881925818681978*^9}},ExpressionUUID->"cc908f24-70f9-49b5-ac8e-\
+17c31eafd921"]
+},
+WindowSize->{808, 911},
+WindowMargins->{{654, Automatic}, {Automatic, 174}},
+FrontEndVersion->"13.1 for Mac OS X ARM (64-bit) (June 16, 2022)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"2120e1d8-f50b-4cd7-9c59-bc19ae53779d"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 264, 4, 64, "Input",ExpressionUUID->"cc908f24-70f9-49b5-ac8e-17c31eafd921"]
+}
+]
+*)
+
+(* End of internal cache information *)
+
