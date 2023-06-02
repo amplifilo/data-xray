@@ -81,7 +81,7 @@ class GetData:
                     print(error)
 
     @classmethod
-    def find_data(cls, topdir=[], ext='3ds', skip=['blank'], get_data=False):
+    def find_data(cls, topdir=[], ext='3ds', skip=['blank'], get_data=False, header_only=False):
         # directory crawler: return all files of a given extension
         # in the current and all the nested directories
         from data_xray import nanonisio as nio
@@ -98,13 +98,34 @@ class GetData:
                     # grids.append(nio.Grid(fname=addname))
         dataFiles = [x for _, x in sorted(zip([os.path.getmtime(f) for f in dataFiles], dataFiles))];
 
-        for d in tqdm(dataFiles):
-            if len(re.findall('sxm', d)):
-                dataList.append(nio.Scan(fname=d))
-            elif len(re.findall('3ds', d)):
-                dataList.append(nio.Grid(fname=d))
+        if get_data:
+            for d in tqdm(dataFiles):
+                if len(re.findall('sxm', d)):
+                    dataList.append(nio.Scan(fname=d, header_only=header_only))
+                elif len(re.findall('3ds', d)):
+                    dataList.append(nio.Grid(fname=d,header_only=header_only))
+                elif len(re.findall('dat', d)):
+                    dataList.append(nio.Spectrum(fname=d,header_only=header_only))
+                    
+            return dataList
+        else:
+            return dataFiles
 
-        return dataList if get_data else dataFiles
+    @classmethod
+    def group_spectra(cls, data_list, group_sequences=3):
+        #data must already be imported
+                fdicts = []
+                locs  = [tuple([float(_d.header["X (m)"]),float(_d.header["Y (m)"])]) for _d in data_list]
+                pddf = pd.DataFrame({'offset':locs, 'fname':data_list});
+
+                pddf.groupby('offset').ngroups
+                for k, v in pddf.groupby('offset').groups.items():
+                    if len(v) > group_sequences: #group_sequences can be as small as 1 (for 2 sequences)
+                        fdicts.append([data_list[vv] for vv in v])            
+                print('groups of spectra found')
+                print([len(f) for f in fdicts])
+                return fdicts
+
 
     @classmethod
     def simple_csvread(cls, fl, separator, header=0):
@@ -250,7 +271,7 @@ def select_folder():
     return filedialog.askdirectory()
 
 
-def FindData(topdir=[], ext='3ds', skip=['blank'], get_data=False):
+def FindData(topdir=[], ext='3ds', skip=['blank'], get_data=False, header_only=False):
     # directory crawler: return all files of a given extension
     # in the current and all the nested directories
     from data_xray import nanonisio as nio
@@ -269,9 +290,12 @@ def FindData(topdir=[], ext='3ds', skip=['blank'], get_data=False):
 
     for d in tqdm(dataFiles):
         if len(re.findall('sxm', d)):
-            dataList.append(nio.Scan(fname=d))
+            dataList.append(nio.Scan(fname=d, header_only=header_only))
         elif len(re.findall('3ds', d)):
-            dataList.append(nio.Grid(fname=d))
+            dataList.append(nio.Grid(fname=d,header_only=header_only))
+        elif len(re.findall('dat', d)):
+            dataList.append(nio.Spectrum(fname=d,header_only=header_only))
+
 
     return dataList if get_data else dataFiles
 

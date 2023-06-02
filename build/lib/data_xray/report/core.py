@@ -1,5 +1,7 @@
 from ..scan import PlotImage
 from ..grid import *
+from ..grid.dsops import grid_viz
+from ..nanonisio import Grid, Scan
 import numpy as np
 from pptx import Presentation
 from pptx.util import Inches
@@ -9,12 +11,25 @@ import pandas as pd
 #some utilies to work with powerpoint
 meanstd = lambda arr: np.std(np.ravel(arr)/np.mean(np.ravel(arr)))
 
-class SummaryPPT(object):
-    def __init__(self, pname="image_summary", new=False, fdict=None, maximages=50, chanselect = {'scan':'Z', 'grid':'cf'}, **kwargs):
 
+class SummaryPPT(object):
+    #group-sequences selects sequential images with group_sequences images of the same area (like sequential slides)
+    def __init__(self, pname="image_summary", new=False, fdict=None, group_sequences = False, maximages=50, chanselect = {'scan':'Z', 'grid':'cf'}, **kwargs):
+    
         if fdict is None:
             print('please specify data to summarize')
             return
+        elif group_sequences:
+            fdicts = []
+            scan_offsets  = [tuple(f.header['scan_offset']) for f in fdict]
+            pddf = pd.DataFrame({'offset':scan_offsets, 'fname':fdict});
+            pddf.groupby('offset').ngroups
+            for k, v in pddf.groupby('offset').groups.items():
+                if len(v) > group_sequences: #group_sequences can be as small as 1 (for 2 sequences)
+                    fdicts.append([fdict[vv] for vv in v])            
+            print('movies found')
+            print([len(f) for f in fdicts])
+            
         else:
             fdicts = [fdict[i:i + maximages] for i in range(0, len(fdict), maximages)]
 
@@ -43,12 +58,13 @@ class SummaryPPT(object):
     def insert_data(self):
         for fj in self.fdict:
             if re.findall('sxm', fj.fname):
-                try:
+                    s_d = Scan(fj.header['fname'], header_only=False)
+                #try:
                     if self.chanselect == "Automatic":
                         # attempt to recognize good data
                         plotsignals = []
-                        for c in fj.signals.keys():
-                            sig = fj.signals[c]['forward']
+                        for c in s_d.signals.keys():
+                            sig = s_d.signals[c]['forward']
                             sig = sig[~np.isnan(sig)]
                             if meanstd(sig) > 2:
                                 plotsignals.append(c)
@@ -57,61 +73,69 @@ class SummaryPPT(object):
 
                     else:
                         plotsignals = self.chanselect['scan']
+                    
+                    plotsignals = [p for p in plotsignals if p in s_d.signals.keys()]
 
-                    nrows = 2 if len(plotsignals) > 2 else 1
+                    nrows = 2 if len(plotsignals) > 3 else 1
                     ncols = int(np.ceil(len(plotsignals) / nrows))
-                    f3, a3 = plt.subplots(nrows, ncols);
+                    #f3, a3 = plt.subplots(nrows, ncols);
+                    f3, a3 = pplt.subplots(nrows=nrows, ncols=ncols);
                     if a3 is not list:
                         a3 = [a3]
                     for c, a in zip(plotsignals, np.ravel(a3)):
-                        PlotImage(fj, chan=c, ax=a, high_pass=None);
+                        PlotImage(s_d, chan=c, ax=a, high_pass=None);
 
                     [a.axis('off') for a in np.ravel(a3)]
 
                     xy = ['X', 'Y']
-                    offset = fj.header['scan_offset'] / 1e-9
+                    offset = s_d.header['scan_offset'] / 1e-9
                     xyoffsets = [xy[j] + '=' + str(np.round(offset[j], 2)) + ' nm ' for j in [0, 1]]
 
-                    titleString = [fj.fname]
-                    titleString.append('Bias: ' + str(fj.header['bias']) + 'V')
-                    titleString.append('Control: ' + fj.header['z-controller']['Name'][0])
+                    titleString = [s_d.fname]
+                    titleString.append('Bias: ' + str(s_d.header['bias']) + 'V')
+                    titleString.append('Control: ' + s_d.header['z-controller']['Name'][0] + ' Setpoint:' + str(s_d.header['z-controller']['Setpoint'].values)[2:-2])
                     titleString.append('Offsets: ' + xyoffsets[0] + xyoffsets[1])
-                    titleString.append('Resolution: ' + str(fj.header['scan_pixels']))
+                    titleString.append('Resolution: ' + str(s_d.header['scan_pixels']))
 
                     self.fig_to_ppt([f3], leftop=[1, 2], txt=titleString)
-                    print(os.path.basename(fj.ds.fname) + ' imported')
-                    f3.clf();  # close figure so that it doesn't clog up in the end
-                except:
-                    print(os.path.basename(fj.fname) + ' failed')
+                    print(os.path.basename(s_d.ds.fname) + ' imported')
+                    pplt.close();
+                    del s_d
+                    #f3.clf();  # close figure so that it doesn't clog up in the end
+                #except:
+                #    print(os.path.basename(fj.fname) + ' failed')
 
             elif re.findall('3ds', fj.fname):
+                #fix the same way as images. load each file name, then delete the object
                 try:
-                    fig, ax = plt.subplots(1, 2)
-                    ChanHistogramDS(fj.ds, xy=['bias', self.chanselect['grid']], xymod=[lambda x: x, lambda x: x / np.mean(np.ravel(x))],
+                    g_d = Grid(fj.fname)
+
+                    fig, ax = pplt.subplots(nrows = 1, ncols = 2);
+
+                    grid_viz.chan_histogram(g_d.ds, xy=['bias', self.chanselect['grid']], xymod=[lambda x: x, lambda x: x / np.mean(np.ravel(x))],
                                     ax=ax[0], label=['bias', self.chanselect['grid'], ''])
 
                     # plop in a clustered map
-                    km = ChanPcaKmeansDS(fj.ds, xvec='bias', chan=self.chanselect['grid'], mod=lambda x: x / np.mean(np.ravel(x)),
-                                         comps=6, nclust=4, fig=None)
-                    ax[1].imshow(km)
-                    #plt.colorbar()
-
+                    km = grid_viz.chan_pca_kmeans(g_d.ds, xvec='bias', chan=self.chanselect['grid'], mod=lambda x: x / np.mean(np.ravel(x)),
+                                         comps=6, nclust=4, fig=None);
+                    ax[1].imshow(km);
+                    
                     titleString = [fj.fname]
-                except:
-                    print(os.path.basename(fj.fname) + ' failed. Import skipped')
-                    continue
-                # titleString.append('Bias: ' + str(fj.header['bias']) + 'V')
-                # titleString.append('Control: ' + fj.header['z-controller']['Name'][0])
-                # titleString.append('Offsets: ' + xyoffsets[0] + xyoffsets[1])
-                # titleString.append('Resolution: ' + str(fj.header['scan_pixels']))
-                try:
+                    titleString.append('Pixels:' + str(fj.ds.attrs['dim_px']))
+                    titleString.append('Size:' + str(fj.ds.attrs['size_xy'][0])+'/'+str(fj.ds.attrs['size_xy'][1]))
+                    titleString.append('Date:' + str(fj.ds.attrs['start_time']))
+                
                     self.fig_to_ppt([fig], leftop=[1, 2], txt=titleString)
                     print(os.path.basename(fj.fname) + ' imported')
 
-                    fig.clf();  # close figure so that it doesn't clog up in the end
+                    pplt.close();  # close figure so that it doesn't clog up in the end
+                    del fig
+                    #fig.clf();
+                    del g_d
 
                 except:
                     print(os.path.basename(fj.fname) + ' import into ppt failed')
+                    continue
 
     def insert_maps(self, mapchan=['cf']):
         
@@ -202,7 +226,8 @@ class SummaryPPT(object):
 
                 titleString = [fj.fname]
                 titleString.append('Bias: ' + str(fj.header['bias']) + 'V')
-                titleString.append('Control: ' + fj.header['z-controller']['Name'][0])
+                setpoint = str(fj.ds.attrs['z-controller']['Setpoint'].values)[2:-2]
+                titleString.append('Control: ' + fj.header['z-controller']['Name'][0] + ' Setpoint: ' + setpoint)
                 titleString.append('Offsets: ' + xyoffsets[0] + xyoffsets[1])
                 titleString.append('Resolution: ' + str(fj.header['scan_pixels']))
                 
@@ -317,3 +342,129 @@ class SummaryPPT(object):
                 font.size = Pt(12)    
                 #    p.text = t
                 p = text_frame.add_paragraph()
+
+
+
+class QuickPPT(object):
+#similar to SummaryPPT, but now decoupled from specific 
+# data types. Designed to be a catch-all, python -> ppt tool.
+# Todo: update SummaryPPT to utilize QuickPPT constructs.
+#     
+    def __init__(self, presentation_name):
+        self.presentation_name = presentation_name
+        self.init_ppt()
+
+    def init_ppt(self):
+        pres = Presentation()
+        pres.notes_master.name = self.presentation_name
+        self.pres = pres
+
+    def save(self):
+        self.pres.save(self.presentation_name)
+
+    def png_to_ppt(self, pngfile, ttl = []):
+       """
+       Plop a PNG file into powerpoint slide
+       :param pngfile:
+       :param pres:
+       :param ttl:
+       :return:
+       """
+
+       #blank_slide_layout = pres.slide_layouts[6]
+       title_slide_layout = self.pres.slide_layouts[9]
+
+       left = top = Inches(1)
+
+       slide = self.pres.slides.add_slide(title_slide_layout)
+       slide.shapes.add_picture(pngfile, left, top)
+       subtitle = slide.placeholders[1]
+       title = slide.shapes.title
+       if len(ttl):
+           subtitle.text = ttl
+
+    def pplt_to_ppt(self, figs, leftop=[[0,1.2]], txt=None):
+        """
+        Plop figures into powerpoint
+        :param figs:
+        :param pres:
+        :param leftop:
+        :param txt:
+        :return:
+        """
+        #savepptx needs to be a full path. If None is provided the default presentation
+        #will be created with a name sum1.pptx in the current folder
+        from pptx.util import Inches
+
+        blank_slide_layout = self.pres.slide_layouts[5]
+        slide = self.pres.slides.add_slide(blank_slide_layout)
+        
+        
+        tmp_path = 't1.png'
+        for figp, figoffset in zip(figs, leftop):
+            left = Inches(figoffset[0])
+            top = Inches(figoffset[1])
+            
+            figp.savefig(tmp_path, transparent=1, format='png', dpi=300)
+            slide.shapes.add_picture(tmp_path, left, top)
+
+        if txt is not None:
+            self.text_to_slide(txt, slide=slide)
+
+    def text_to_slide(self, txt, slide=None): #lets make txt a list of strings
+                                              
+        """
+        convert text to slide
+
+        :param txt: list of strings
+        :param pres:
+        :param slide:
+        :return:
+        """
+        from pptx.util import Pt
+        #title = slide.shapes.title
+        #subtitle = slide.placeholders[1]
+
+       # title.text = "Hello, World!"
+        #subtitle.text = "python-pptx was here!"
+
+       # prs.save('test.pptx')
+
+        from pptx.util import Inches
+
+        if self.pres == None:
+            print('please init presentation')
+        else:
+            if slide is None:
+                bullet_slide_layout = self.pres.slide_layouts[5]
+                slide = self.pres.slides.add_slide(bullet_slide_layout)
+
+            shapes = slide.shapes
+
+            countshapes = 0
+
+            #just catch the first shape object with a frame in it
+            for shape in slide.shapes:
+                if not shape.has_text_frame:
+                    continue
+                elif countshapes > 0:
+                    tframe = shape.text_frame
+                    tframe.clear()
+                    #print('caught one')
+                else:
+                    text_frame = shape.text_frame
+                    text_frame.clear()
+                    countshapes = 1
+
+            text_frame.clear()
+            p = text_frame.paragraphs[0]
+            
+            for t in txt:
+                run = p.add_run()
+                run.text = t
+
+                font = run.font
+                font.name = 'Calibri'
+                font.size = Pt(14)
+                #    p.text = t
+                p = text_frame.add_paragraph()     

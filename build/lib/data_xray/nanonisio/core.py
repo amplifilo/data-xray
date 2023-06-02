@@ -1,7 +1,7 @@
-#sourced from nanonispy by underchemist
+#originally sourced from nanonispy by underchemist
 #modified by Petro Maksymovych to: (1) make context aware header parser;
-#                                   (2) package data to xarray
-#final modification October 15, 2017
+#                                   (2)package data to xarray
+#
 
 # from ..modules import *
 import os
@@ -160,33 +160,39 @@ class Grid(NanonisFile):
         If fname does not have a '.3ds' extension.
     """
 
-    def __init__(self, fname=None, fromcdf=None, savecdf=0):
-        print(fname)
+    def __init__(self, fname=None, fromcdf=None, savecdf=0, header_only=False):
+       
         if fromcdf is None:
-            _is_valid_file(fname, ext='3ds')
-            super().__init__(fname)
-            self._parse_3ds_header(self.header_raw)
-            self.signals = self._load_data()
-            swpp = self._derive_sweep_signal()
-            
-            if swpp is None:
-                print(fname + " failed")
-                return
-            else:
-                self.signals['sweep_signal'] = swpp
-            self.signals['topo'] = self._extract_topo()
-            if savecdf:
-                self._build_xarray(savecdf=fname[:-3] + 'nc')
-            else:
-                self._build_xarray(savecdf=None)
-            self.name = fname
+            #try:
+                _is_valid_file(fname, ext='3ds')
+                super().__init__(fname)
+                self._parse_3ds_header(self.header_raw)
+                if header_only:
+                    return
+                self.signals = self._load_data()
+                swpp = self._derive_sweep_signal()
+                
+                if swpp is None:
+                    print(fname + " failed")
+                    return
+                else:
+                    self.signals['sweep_signal'] = swpp
+                self.signals['topo'] = self._extract_topo()
+                if savecdf:
+                    self._build_xarray(savecdf=fname[:-3] + 'nc')
+                else:
+                    self._build_xarray(savecdf=None)
+                self.name = fname
 
-            self.ncdf_name = fname[:-3] + 'nc'
+                self.ncdf_name = fname[:-3] + 'nc'
 
-            print(fname + " imported")
-        else:
-            self.ds = xr.open_dataset(fromcdf)
-            self.ncdf_name = self.ds.cdf
+                print(fname + " imported")
+            #except:
+                print("reading " + fname + " failed")
+                return None
+        #else:
+        #    self.ds = xr.open_dataset(fromcdf)
+        #    self.ncdf_name = self.ds.cdf
 
     def _load_data(self):
         """
@@ -256,7 +262,7 @@ class Grid(NanonisFile):
                     mls = self.header['segments'].split(';')
                     for mj, j in enumerate(mls):
                         mv = [float(m) for m in j.split(',')]
-                        vec = np.linspace(start=mv[0], stop=mv[1], num=mv[-1], dtype='float')
+                        vec = np.linspace(start=mv[0], stop=mv[1], num=int(mv[-1]), dtype='float')
                         v.append(vec[:-1] if mj < len(mls) - 1 else vec)
                     self.v_raw = v #this is just to keep track of branches
 
@@ -310,7 +316,8 @@ class Grid(NanonisFile):
         ldict = {
         'Vert. Deflection' : 'vd', 'Horiz. Deflection': 'hd', 'Input 8' : 'c', 'Current':'c',\
         'Z': 'z', 'Phase' : 'phi', 'Amplitude' : 'amp', 'Frequency Shift' : 'omega', 'OC D1 X (m)': 'liX',\
-  'OC D1 Y (m)':'liY', "LockinX (V)":'liX', "LockinY (V)":'liY'}
+  'OC D1 Y (m)':'liY', "LockinX (V)":'liX', "LockinY (V)":'liY',\
+      'Femto': 'c'}
 
         try:
             sweep_name = self.header['sweep_signal'].lower().split(' ')[0]
@@ -510,11 +517,14 @@ class Scan(NanonisFile):
         If fname does not have a '.sxm' extension.
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname, header_only=False):
         _is_valid_file(fname, ext='sxm')
         super().__init__(fname)
         self.header = self._parse_sxm_header(self.header_raw)
         # data begins with 4 byte code, add 4 bytes to offset instead
+        if header_only:
+            return
+        
         self.byte_offset += 4
 
         # load data
@@ -672,11 +682,14 @@ class Spectrum(NanonisFile):
         If fname does not have a '.dat' extension.
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname, header_only=False):
         _is_valid_file(fname, ext='dat')
         super().__init__(fname)
         self.header = self._parse_dat_header(self.header_raw)
+        if header_only:
+            return
         self.signals = self._load_data()
+        #self._build_xarray(savecdf=None)
 
     def _load_data(self):
         """
@@ -718,32 +731,48 @@ class Spectrum(NanonisFile):
         header_entries = header_raw.split('\r\n')
         header_entries = header_entries[:-3]
         header_dict = dict()
+
+
         for entry in header_entries:
-            key, val, _ = entry.split('\t')
-            header_dict[key] = val
+
+                splits = entry.split('\t')
+                if len(splits) >= 2:
+                    header_dict[splits[0]] = splits[1]
+                # except:
+                #     print("issue parsing header")
 
         return header_dict
 
     def _build_xarray(self, savecdf=None):
         import xarray as xr
-        ds = xr.Dataset()
-
+                
         ldict = {
             'Vert. Deflection': 'vd', 'Horiz. Deflection': 'hd', 'Input 8': 'c', 'Current': 'c', \
-            'Z': 'z', 'Phase': 'phi', 'Amplitude': 'amp', 'Frequency Shift': 'omega'}
+            'Z': 'z', 'Phase': 'phi', 'Amplitude': 'amp', 'Frequency Shift': 'omega', 'OC D1 X':'lix',\
+            'OC D1 Y':'liy'}
 
-        try:
-            #sweep_name = self.header['sweep_signal'].lower().split(' ')[0]
-            sweep_name = self.header['Experiment'].lower().split(' ')[0]
+        # try:
+        #     #sweep_name = self.header['sweep_signal'].lower().split(' ')[0]
+        #     sweep_name = self.header['Experiment'].lower().split(' ')[0]
 
-        except:
-            sweep_name = 'bias'
+        # except:
+        #     sweep_name = 'bias'
 
-        if sweep_name == 'bias':
-            vf_name = 'Bias'
-            vr_name = 'Bias [bwd]'
+        # if sweep_name == 'bias':
+        #     vf_name = 'Bias'
+        #     vr_name = 'Bias [bwd]'
+        # elif sweep_name == "bias spectroscopy":
 
-        ds.coords[sweep_name] = self.signals['Bias (V)']
+
+        sweep_name = [k for k in self.signals.keys() if "ias" in k][0];
+        
+        if "ias" in sweep_name:
+            sweep_key = "bias"
+        else:
+            sweep_key = "sweep"
+        
+        ds = xr.Dataset(coords={sweep_key:self.signals[sweep_name]})
+                
         for k, v in ldict.items():
 
             for m in ([i for i in self.signals.keys() if i.find(k) != -1]):
@@ -751,13 +780,17 @@ class Spectrum(NanonisFile):
                 if m.find('bwd') != -1:
                     sname = v + 'r'
 
-                ds[sname] = (('x', 'y', sweep_name), self.signals[m])
+                ds[sname] = ((sweep_key), self.signals[m])
 
         for k, v in self.header.items():
             ds.attrs[k] = v
         ds.attrs['filename'] = self.fname
-
         self.ds = ds
+
+        #except:
+        #    self.ds = None
+
+        
 
 
 

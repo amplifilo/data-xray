@@ -8,6 +8,7 @@ Created on Wed Jan 11 18:31:02 2017
 
 import numpy as np
 import deepdish as dd
+import proplot as pplt
 from copy import copy
 
 import pandas as pd
@@ -41,13 +42,7 @@ from sklearn.gaussian_process.kernels import Matern, WhiteKernel
 
 #
 from yattag import Doc
-from yattag import Doc
 #from pyearth import Earth
-
-
-
-from pptx import Presentation
-from pptx.util import Inches
 
 #
 from scipy import ndimage
@@ -63,14 +58,14 @@ from scipy import constants as C
 
 
 
-import matplotlib.gridspec as gridspec
-from matplotlib import pyplot as plt
-from matplotlib.figure import Figure
+#import matplotlib.gridspec as gridspec
+#from matplotlib import pyplot as plt
+#from matplotlib.figure import Figure
 
 import fnmatch
 import pyperclip
 import xarray as xry
 
 
-import spiepy
+#import spiepy
 from matplotlib_scalebar.scalebar import ScaleBar
