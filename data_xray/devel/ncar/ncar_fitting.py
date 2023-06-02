@@ -23,6 +23,29 @@ rng = np.random.default_rng(RANDOM_SEED)
 #print(jax.numpy.ones(3).device()) # TFRT_CPU_0
 
 
+def pymc_numpyro_glm(x,y):
+
+    """pymc/numpyro fit to 2nd order polynomial. Requires x and y 1D-variables"""
+
+    with Model() as model:  # model specifications in PyMC are wrapped in a with-statement
+        # Define priors
+        sigma = HalfCauchy("sigma", beta=10)
+        intercept = Normal("Intercept", 0, sigma=20)
+        poly1 = Normal("poly1", 0, sigma=20)
+        poly2 = Normal("poly2", 0, sigma=20)
+
+
+        # Define likelihood
+        likelihood = Normal("y", mu=intercept + poly1 * x + poly2 * x**2, sigma=sigma, observed=y)
+
+        # Inference!
+        # draw 3000 posterior samples using NUTS sampling
+        #idata = sample(3000)
+        idata = jx.sample_numpyro_nuts(3000, progressbar=False, chain_method='parallel')
+
+    return idata
+
+
 
 class NCAR_fit(object):
     """ object to fit TAR to a set of IV curves. dset is xarray with a di field"""
@@ -51,7 +74,7 @@ class NCAR_fit(object):
         kappaz_std = []
         for _di in tqdm(di_sorted.T):
 
-            idata = self.pymc_numpyro_glm(xdiv,_di)
+            idata = pymc_numpyro_glm(xdiv,_di)
             kappa_sample = np.array([idata.posterior.poly1[-1] + 2*idata.posterior.poly2[-1]*xx for xx in xdiv])
             kappaz.append(kappa_sample.mean(axis=-1))
             kappaz_std.append(kappa_sample.std(axis=-1))
@@ -65,7 +88,7 @@ class NCAR_fit(object):
                 kappa_std=([ "xdiv","v"], np.array(kappaz_std).T),
             ),
             coords=dict(
-                v=dset.v.data,
+                v=self.dset.v.data,
                 xdiv=xdiv))
     
     
@@ -76,11 +99,14 @@ class NCAR_fit(object):
         #this function plots the kappa values from pre-fitted kappa_dict
 
         defaultKwargs = {
+            'src': None,
             'map_aspect': 2.0,
             'figax': pplt.subplots(refwidth=2.6, refaspect=2.1, nrows=3, sharey=False),
-            'slice':slice(0,-1),
+            'zrange':slice(0,-1),
             'kappa_map_ticks':1.,
             'kappa_map_labels':10,
+            'voltage_scale':1,
+            
         }
 
         kwargs = { **defaultKwargs, **kwargs }
@@ -88,13 +114,15 @@ class NCAR_fit(object):
         # f2,a2 = pplt.subplots()
         # a2.plot(kappa_dict['di_sorted'].T, cycle='viridis')
 
+        src  = [self.kappa_dict if kwargs["src"] is None else kwargs["src"]][0]
 
-        zz = self.kappa_dict['kappa'][kwargs["slice"]]
-        xx = self.kappa_dict["v"].data*1000
-        yy = self.kappa_dict['xdiv'].data
-        _div = self.kappa_dict["di_sorted"][kwargs["slice"]]
+        zz = src['kappa'][kwargs["zrange"]]
+        xx = src["v"].data*kwargs["voltage_scale"]
+        yy = src['xdiv'].data
+        _div = src["di_sorted"][kwargs["zrange"]]
 
         f3, a3 = kwargs['figax']
+
         a3[0].plot(xx,zz.T,cycle='viridis_r')
         a3[0].format(grid=False, xticklabelsize=12,yticklabelsize=12)
         a3[0].set_ylabel(r"$\it{\kappa / \kappa_{N}}$", labelpad=3.0, size=14)
@@ -108,12 +136,13 @@ class NCAR_fit(object):
                      ]
 
         meankappamap = a3[1].imshow(np.flipud(zz), robust=True,cmap="coolwarm",aspect=kwargs["map_aspect"], extent=mapbounds)
-        bar = a3[1].colorbar(meankappamap, loc='lr',width=0.7, length=4, ticks=kwargs["kappa_map_ticks"], pad=.5)
+        bar = a3[1].colorbar(meankappamap, loc='lr',width=0.7, length=4, ticks=kwargs["kappa_map_ticks"], pad=.5,
+                             label=r"$\it{\kappa / \kappa_{N}}$")
         bar.ax.tick_params(labelsize=kwargs["kappa_map_labels"])
-
+        
         a3[1].grid(False)
         #cbar = a3[1].colorbar(meankappamap, loc='lr',width=0.5,length=6,  ticks=.5, pad=.75)
-        a3[1].format(xlabel='', ylabel=r"$\it{\kappa / \kappa_{N}}$",xlabelsize=14,ylabelsize=14,xticklabelsize=12,yticklabelsize=12)
+        a3[1].format(xlabel='', ylabel=r"$\it{log(dI/dV)}$", xlabelsize=14,ylabelsize=14,xticklabelsize=12,yticklabelsize=12)
 
         a3[2].plot(xx, _div.T,cycle='viridis_r')
         a3[2].format(grid=False, xticklabelsize=12,yticklabelsize=12)
@@ -153,27 +182,6 @@ class NCAR_fit(object):
 
     
     
-    def pymc_numpyro_glm(self, x,y):
-
-        """pymc/numpyro fit to 2nd order polynomial. Requires x and y 1D-variables"""
-
-        with Model() as model:  # model specifications in PyMC are wrapped in a with-statement
-            # Define priors
-            sigma = HalfCauchy("sigma", beta=10)
-            intercept = Normal("Intercept", 0, sigma=20)
-            poly1 = Normal("poly1", 0, sigma=20)
-            poly2 = Normal("poly2", 0, sigma=20)
-
-
-            # Define likelihood
-            likelihood = Normal("y", mu=intercept + poly1 * x + poly2 * x**2, sigma=sigma, observed=y)
-
-            # Inference!
-            # draw 3000 posterior samples using NUTS sampling
-            #idata = sample(3000)
-            idata = jx.sample_numpyro_nuts(3000, progressbar=False, chain_method='parallel')
-
-        return idata
 
 
 

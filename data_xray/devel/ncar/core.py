@@ -25,70 +25,140 @@ class SinglePointXarray():
     "apply this one to a list of .dat file to compose an xarray"
     def __init__(self,datdict):
         spectra = [self.PackIV(z) for z in datdict];
-        zarr  = [np.sum(s['z']) for s in spectra]
+        zarr = zarr = [np.sum(s[0]) for s in spectra]
         self.zarr = zarr = (zarr - np.min(zarr))
-        self.varr = varr = np.mean([s["bias"] for s in spectra], axis=0)/1e-3
-
-        for _is, s in enumerate(spectra):
-            try:
-                s["i"]
-            except:
-                print("problem with " + str(_is))
-                return
-            
-        iarr = np.asarray([s["i"] for s in spectra])
-
+        print([len(s[1]) for s in spectra])
+        self.varr = varr = np.mean([s[1] for s in spectra], axis=0)/1e-3
+        iarr = np.asarray([s[2] for s in spectra])
         self.iarr = iarr = iarr/1e-9
+        self.diarr = diarr = np.asarray([s[3] for s in spectra])
 
-        if 'di' in spectra[0].keys():
-            diarr = np.asarray([s['di'] for s in spectra])
-        else:
-            diarr = np.gradient(iarr, axis=1)/np.gradient(varr)
 
-        self.source = xr.Dataset(
+
+        try:
+            log_di = np.log10(np.abs(diarr))
+            self.source = xr.Dataset(
+            {
+            "i": xr.DataArray(data=iarr, dims=["z","v"], coords={"z":zarr, "v":varr}),
+            "di": xr.DataArray(data=diarr, dims=["z","v"], coords={"z":zarr, "v":varr}),
+            "log_di": xr.DataArray(data=log_di, dims=["z","v"], coords={"z":zarr, "v":varr})
+            })
+
+        except:
+            print("can't log di for some reason") 
+            self.source = xr.Dataset(
             {
             "i": xr.DataArray(data=iarr, dims=["z","v"], coords={"z":zarr, "v":varr}),
             "di": xr.DataArray(data=diarr, dims=["z","v"], coords={"z":zarr, "v":varr})
-             }
-        )
-
+            })
+  
+        
     def PackIV(self, fname):
-
-        def check_record(chan, signalz):
-
-            chan_bw = re.split('\(',chan)
-            chan_bw = chan_bw[0] + ' [bwd] (' + chan_bw[1]
-
-            if chan in signalz.keys():
-                _cdata = signalz[chan]
-                if chan_bw in signalz.keys():
-                    _cdata = np.mean([_cdata, signalz[chan_bw]], axis=0);
-                return _cdata
-            else:
-                return []
-
+        
         s1 = Spectrum(fname.fname);
-        _data = {}
-        if "Z (m)" in s1.signals.keys():
-            z = s1.signals["Z (m)"].mean() / 1e-9;
+
+        #this here is to check if the data file is a composite with multiple sequential spectra
+        if len(np.where(['AVG' in m for m in s1.signals.keys()])[0]):
+            z = np.asarray([float(s1.header["Z (m)"]) , float(s1.header["Z offset (m)"])])/1e-9;
+            bias = s1.signals["Bias calc (V)"];
+            cur = np.mean([s1.signals["Current [AVG] (A)"], s1.signals["Current [AVG] [bwd] (A)"]], axis=0);
         else:
             z = np.asarray([float(s1.header["Z (m)"]) , float(s1.header["Z offset (m)"])])/1e-9;
-            z = np.sum(z)
-        #print(s1.signals.keys())
-        _data['z'] = z
-        keycodes = {"bias":"Bias calc (V)",
-                    "i": "Current (A)",
-                    "di": 'LI Demod 1 X (A)',
-                    "di3": 'LI Demod 3 X (A)',
-                    "diOC": 'OC D1 X (m)'
-                    }
+            cur = np.mean([s1.signals["Current (A)"], s1.signals["Current [bwd] (A)"]], axis=0);
+            bias = s1.signals["Bias calc (V)"];
+        
 
-        for key, code in keycodes.items():
-            _d  = check_record(code, s1.signals)
-            if len(_d):
-                _data[key] = _d
+        if len(np.where(['LI Demod 1 X [AVG]' in m for m in s1.signals.keys()])[0]):
+            lix_inds = np.where(['LI Demod 1 X [AVG]' in m for m in s1.signals.keys()])[0]
+            sig1,sig2 = [list(s1.signals.keys())[j] for j in lix_inds]
+            diarr = np.mean([s1.signals[sig1], s1.signals[sig2]], axis=0);
+        
+        elif len(np.where(['LI Demod 1 X' in m for m in s1.signals.keys()])[0]):
+            #print(s1.signals.keys())
+            # lix_forw = np.where(['LI Demod 1 X (A)' == m for m in s1.signals.keys()])[0]
+            # lix_rev = np.where(['LI Demod 1 X (A) [bwd]' == m for m in s1.signals.keys()])[0]
+            
+            # sig1,sig2 = [list(s1.signals.keys())[j] for j in [lix_forw,lix_rev]]
+            diarr = np.mean([s1.signals['LI Demod 1 X (A)'], s1.signals['LI Demod 1 X [bwd] (A)']], axis=0);
+        
+        else:
+            diarr = np.gradient(cur, axis=-1)/np.gradient(bias)
+        
+        
+        
+        
+        return [z, bias, cur, diarr]
 
-        return _data
+
+
+# class SinglePointXarray():
+#     "apply this one to a list of .dat file to compose an xarray"
+#     def __init__(self,datdict):
+#         spectra = [self.PackIV(z) for z in datdict];
+#         zarr  = [np.sum(s['z']) for s in spectra]
+#         self.zarr = zarr = (zarr - np.min(zarr))
+#         self.varr = varr = np.mean([s["bias"] for s in spectra], axis=0)/1e-3
+
+#         for _is, s in enumerate(spectra):
+#             try:
+#                 s["i"]
+#             except:
+#                 print("problem with " + str(_is))
+#                 return
+            
+#         iarr = np.asarray([s["i"] for s in spectra])
+
+#         self.iarr = iarr = iarr/1e-9
+
+#         if 'di' in spectra[0].keys():
+#             diarr = np.asarray([s['di'] for s in spectra])
+#         else:
+#             diarr = np.gradient(iarr, axis=1)/np.gradient(varr)
+
+#         self.source = xr.Dataset(
+#             {
+#             "i": xr.DataArray(data=iarr, dims=["z","v"], coords={"z":zarr, "v":varr}),
+#             "di": xr.DataArray(data=diarr, dims=["z","v"], coords={"z":zarr, "v":varr})
+#              }
+#         )
+
+#     def PackIV(self, fname):
+
+#         def check_record(chan, signalz):
+
+#             chan_bw = re.split('\(',chan)
+#             chan_bw = chan_bw[0] + ' [bwd] (' + chan_bw[1]
+
+#             if chan in signalz.keys():
+#                 _cdata = signalz[chan]
+#                 if chan_bw in signalz.keys():
+#                     _cdata = np.mean([_cdata, signalz[chan_bw]], axis=0);
+#                 return _cdata
+#             else:
+#                 return []
+
+#         s1 = Spectrum(fname.fname);
+#         _data = {}
+#         if "Z (m)" in s1.signals.keys():
+#             z = s1.signals["Z (m)"].mean() / 1e-9;
+#         else:
+#             z = np.asarray([float(s1.header["Z (m)"]) , float(s1.header["Z offset (m)"])])/1e-9;
+#             z = np.sum(z)
+#         #print(s1.signals.keys())
+#         _data['z'] = z
+#         keycodes = {"bias":"Bias calc (V)",
+#                     "i": "Current (A)",
+#                     "di": 'LI Demod 1 X (A)',
+#                     "di3": 'LI Demod 3 X (A)',
+#                     "diOC": 'OC D1 X (m)'
+#                     }
+
+#         for key, code in keycodes.items():
+#             _d  = check_record(code, s1.signals)
+#             if len(_d):
+#                 _data[key] = _d
+
+#         return _data
 
 class DatGridXarray():
     "this is to pack a bunch of dat files, each of which as multiple runs and the [AVG] field"

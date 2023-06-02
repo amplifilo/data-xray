@@ -348,7 +348,7 @@ class SummaryPPT(object):
 class QuickPPT(object):
 #similar to SummaryPPT, but now decoupled from specific 
 # data types. Designed to be a catch-all, python -> ppt tool.
-# Todo: update SummaryPPT to utolize QuickPPT constructs.
+# Todo: update SummaryPPT to utilize QuickPPT constructs.
 #     
     def __init__(self, presentation_name):
         self.presentation_name = presentation_name
