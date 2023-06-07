@@ -1,6 +1,6 @@
 from ..scan import PlotImage
 from ..grid import *
-from ..grid.dsops import grid_viz
+#from ..grid.dsops import grid_viz
 from ..nanonisio import Grid, Scan
 import numpy as np
 from pptx import Presentation
