@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: data-xray
-Version: 0.5.3
+Version: 0.6.0
 Summary: Pythonic cure for the hyperspectral morass
 Author: Petro Maksymovych
 Author-email: pmax20@gmail.com
@@ -10,7 +10,7 @@ License: LICENSE.txt
 Classifier: Development Status :: 4 - Beta
 Classifier: License :: OSI Approved :: Apache Software License
 Classifier: Topic :: Scientific/Engineering :: GIS
-Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.9
 Provides-Extra: docs
 License-File: LICENSE.txt
 

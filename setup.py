@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='data_xray',
-    version='0.5.3',
+    version='0.6.0',
     author='Petro Maksymovych',
     author_email='pmax20@gmail.com',
     maintainer='Petro Maksymovych',
@@ -22,6 +22,6 @@ setup(
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: Apache Software License',
         'Topic :: Scientific/Engineering :: GIS',
-        'Programming Language :: Python :: 3.6'
+        'Programming Language :: Python :: 3.9'
     ],
 )
