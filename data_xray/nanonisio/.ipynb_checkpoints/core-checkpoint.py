@@ -791,7 +791,7 @@ class Spectrum(NanonisFile):
             sweep_name = 'bias'
         else:
             sweep_name = sweep_key
-        
+        print(sweep_name)
         # if len(sweep_name):
         #     sweep_key = "bias"
         # else:

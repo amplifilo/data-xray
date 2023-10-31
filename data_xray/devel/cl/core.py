@@ -28,20 +28,23 @@ def despike(data, diff_thresh=30, hmean_window=15, savgol_parms={'window_length'
     return data
 
 
-def pack_xr(clh5):
+def pack_xr(clh5, remove_spikes=True):
     folder = os.path.dirname(clh5)
     base = os.path.basename(clh5)
     cl1_im2 = nxload(clh5)
 
+    #print(cl1_im2.keys())
     if "Acquisition2" in cl1_im2.keys():
         x = np.array(cl1_im2['Acquisition2']['ImageData']['DimensionScaleC'])
         xen = 1.22779e-6 / x
 
         cl_data = cl1_im2['Acquisition2']['ImageData']['Image']
         cldata1 = np.array(cl_data).squeeze().swapaxes(0, -1)
-        cldata1 = np.apply_along_axis(despike, -1, cldata1, diff_thresh=30, hmean_window=15,
-                                      savgol_parms={'window_length': 3, 'polyorder': 1});
-
+        if remove_spikes:
+            cldata1 = np.apply_along_axis(despike, -1, cldata1, diff_thresh=30, hmean_window=15,
+                                       savgol_parms={'window_length': 3, 'polyorder': 1});
+        print('here')
+        
     clxr = xr.Dataset({"cl":
                            xr.DataArray(data=cldata1, dims=["x", "y", "en"], coords={
                                "x": np.arange(cldata1.shape[0]),
@@ -52,8 +55,8 @@ def pack_xr(clh5):
     return clxr
 
 
-def nmf_cl(xrsrc):
-    model = NMF(n_components=3, init='random', random_state=0, max_iter=1000)
+def nmf_cl(xrsrc, n_components=3):
+    model = NMF(n_components=n_components, init='random', random_state=0, max_iter=1000)
     W1 = model.fit_transform(np.abs(xrsrc.cl.data.reshape(-1, 1024)))
     H1 = model.components_
 

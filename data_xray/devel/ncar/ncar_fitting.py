@@ -23,6 +23,10 @@ from sklearn.linear_model import RANSACRegressor
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from sklearn.utils import resample
+from data_xray.file_io import GetData
+from data_xray.devel.ncar import SinglePointXarray
+import os
+    
 
 RANDOM_SEED = 8927
 rng = np.random.default_rng(RANDOM_SEED)
@@ -53,12 +57,37 @@ def pymc_numpyro_glm(x,y):
         #idata = sample(3000)
         idata = jx.sample_numpyro_nuts(3000, progressbar=False, chain_method='parallel')
 
-    kappa_sample = np.array([idata.posterior.poly1[-1] + 2*idata.posterior.poly2[-1]*xx for xx in xdiv])
+    kappa_sample = np.array([idata.posterior.poly1[-1] + 2*idata.posterior.poly2[-1]*xx for xx in x])
     _kappa = kappa_sample.mean(axis=-1)
     _kappaz_std = kappa_sample.std(axis=-1)
     
-    return [_kappa, _kappa_std]
+    return [_kappa, _kappaz_std]
 
+
+def pymc_numpyro_glm_1(x,y):
+
+    """pymc/numpyro fit to 1st order polynomial. Requires x and y 1D-variables"""
+
+    with Model() as model:  # model specifications in PyMC are wrapped in a with-statement
+        # Define priors
+        sigma = HalfCauchy("sigma", beta=10)
+        intercept = Normal("Intercept", 0, sigma=20)
+        poly1 = Normal("poly1", 0, sigma=20)
+        
+
+        # Define likelihood
+        likelihood = Normal("y", mu=intercept + poly1 * x, sigma=sigma, observed=y)
+
+        # Inference!
+        # draw 3000 posterior samples using NUTS sampling
+        #idata = sample(3000)
+        idata = jx.sample_numpyro_nuts(3000, progressbar=False, chain_method='parallel')
+
+    kappa_sample = np.array([idata.posterior.poly1[-1] for xx in x])
+    _kappa = kappa_sample.mean(axis=-1)
+    _kappaz_std = kappa_sample.std(axis=-1)
+    
+    return [_kappa, _kappaz_std]
 
 def pyro_fit(x,y):
 
@@ -250,14 +279,19 @@ class NCAR_fit(object):
             di_sorted = np.log10(self.dset.di.data/1e-9)
             xdiv = di_sorted[:,0]
 
+        
         kappaz = []
         kappaz_std = []
         for _di in tqdm(di_sorted.T):
+            
+            # f2,a2 = pplt.subplots()
+            # a2.plot(xdiv, _di)
 
             idata = pymc_numpyro_glm(xdiv,_di)
-            kappa_sample = np.array([idata.posterior.poly1[-1] + 2*idata.posterior.poly2[-1]*xx for xx in xdiv])
-            kappaz.append(kappa_sample.mean(axis=-1))
-            kappaz_std.append(kappa_sample.std(axis=-1))
+            
+            #kappa_sample = np.array([idata.posterior.poly1[-1] + 2*idata.posterior.poly2[-1]*xx for xx in xdiv])
+            kappaz.append(idata[0])
+            kappaz_std.append(idata[1])
 
         # f2,a2 = plt.subplots()
         # a2.plot(di_sorted.T, cycle='viridis')
@@ -287,6 +321,7 @@ class NCAR_fit(object):
             
             _di = np.nan_to_num(_di,nan=0.0)
             #assumes that func_fit is func_fit(x,y)
+            print(xdiv)
             [_kappa, _kappa_std] = func(xdiv,_di)
             
            
@@ -310,45 +345,6 @@ class NCAR_fit(object):
         
         print("done")
     
-
-    # def kappa_ard_fit(self, **kwargs):
-
-
-    #     if 'zspec' in kwargs.keys():
-    #         sortindex= np.argsort(kwargs['zspec'])
-    #         di_sorted = np.log10(self.dset.di.data[sortindex]/1e-9)
-    #         xdiv = kwargs['zspec'][sortindex]
-    #     else:
-    #         di_sorted = np.log10(self.dset.di.data/1e-9)
-    #         xdiv = di_sorted[:,0]
-
-    #     kappaz = []
-    #     kappaz_std = []
-    #     for _di in tqdm(di_sorted.T):
-            
-    #         _di = np.nan_to_num(_di,nan=0.0)
-    #         _afit = ard_fit(xdiv,_di)
-            
-    #         _kappa = np.gradient(_afit[1])/np.gradient(_afit[0].squeeze())
-
-
-    #         #kappa_sample = np.array([idata.posterior.poly1[-1] + 2*idata.posterior.poly2[-1]*xx for xx in xdiv])
-    #         kappaz.append(np.interp(xdiv,_afit[0].squeeze(),_kappa))
-    #         #kappaz_std.append(kappa_sample.std(axis=-1))
-
-    #     # f2,a2 = plt.subplots()
-    #     # a2.plot(di_sorted.T, cycle='viridis')
-    #     self.kappa_dict = xr.Dataset(
-    #         data_vars=dict(
-    #             di_sorted=([ "xdiv","v"], np.array(di_sorted)),
-    #             kappa=([ "xdiv","v"], np.array(kappaz).T),
-    #             #kappa_std=([ "xdiv","v"], np.array(kappaz_std).T),
-    #         ),
-    #         coords=dict(
-    #             v=self.dset.v.data,
-    #             xdiv=xdiv))
-        
-    #     print("done")
         
     
     def kappa_pymc_summary(self, **kwargs):
@@ -440,11 +436,174 @@ class NCAR_fit(object):
 
         f2.suptitle(str(plot_ind))
 
+
+
+#new auxiliary functions  
+
+
+def large_sets(fname, nfiles=10):
+    df = GetData.find_data(topdir=os.path.dirname(fname),ext='dat', get_data=True, header_only=True);
+    c2 = GetData.group_spectra(df,3)
+    grouped = [c for c in c2 if len(c) > nfiles]
+    return grouped
+
     
-    
+
+def xr_from_dat(fname, target=True):
+
+    df = GetData.find_data(topdir=os.path.dirname(fname),ext='dat', get_data=True, header_only=True);
+    c2 = GetData.group_spectra(df,3)
+    largesets = [c for c in c2 if len(c) > 10]
+    if target:
+        for _ls in largesets:
+            if os.path.basename(fname) in [os.path.basename(lf.fname) for lf in _ls]:
+                target_set = _ls
+
+            return SinglePointXarray(target_set).source
+    else:
+        return [SinglePointXarray(_ts).source for _ts in largesets]
+        
+
+def fit_kappa_poly(_x,_y,deg=2):
+
+    zfitz = []
+    zcovz = []
+    for _di  in _y:
+        #p, cov = np.polyfit(x=xdiv,y=_di,deg=deg, cov=True)
+        _fit, _cov = np.polyfit(_x,_di,deg=deg, cov=True)
+        zfitz.append(np.polyval(np.polyder(_fit,1),_x))
+        zcovz.append(_cov)
+        #bayes_slopez.append(fit_bayes1(xdiv,_di))
+    return {'kappa': np.array(zfitz),'cov':np.array(zcovz)}
+
+
+def kappa_summary(dset, **kwargs):
+
+    if 'sort_ind' in kwargs.keys():
+        sortindex= np.argsort(dset.di[:,kwargs['sort_ind']]).data
+        di_sorted = np.log10(dset.di.data[sortindex]/1e-9)
+        xdiv = di_sorted[:,kwargs['sort_ind']]
+    else:
+        di_sorted = np.log10(dset.di.data/1e-9)
+        xdiv = di_sorted[:,0]
+
+
+    f2,a2 = pplt.subplots()
+    a2.plot(di_sorted.T, cycle='viridis')
+
+
+    fitz = fit_kappa_poly(_x=xdiv, _y=di_sorted.T, deg=4)
+
+    xx = dset.v.data
+    zz = fitz["kappa"]
+    yy = xdiv
+
+    if 'figax' in kwargs.keys():
+        f3, a3 = kwargs['figax']
+
+    else:
+        f3,a3 = pplt.subplots(refwidth=2.6, refaspect=2.1, nrows=2, sharey=False)
+
+    a3[0].plot(xx,zz,cycle='viridis_r')
+    a3[0].format(grid=False, xticklabelsize=12,yticklabelsize=12)
+    a3[0].set_ylabel(r"$\it{\kappa / \kappa_{N}}$", labelpad=3.0, size=14)
+    a3[0].set_xlabel("bias (mV)", labelpad=0.5,size=14)
+    a3[0].set_title("")
+
+    mapbounds = [xx.min(),
+                 xx.max(),
+                 yy.min(),
+                 yy.max()
+                 ]
+
+    meankappamap = a3[1].imshow(np.flipud(zz.T), robust=True,cmap="coolwarm",aspect=10.0, extent=mapbounds)
+    a3[1].grid(False)
+    #cbar = a3[1].colorbar(meankappamap, loc='lr',width=0.5,length=6,  ticks=.5, pad=.75)
+    a3[1].format(xlabel='', ylabel=r'$\it{log(dI/dV)}$',xlabelsize=14,ylabelsize=14,xticklabelsize=12,yticklabelsize=12)
+
+
+class ncar_set(object):
+    def __init__(self, _set, ref = 2, init = 4, sym = False):
+        self.source = _set
+        self.div = self.source.di.data*1e10
+        if sym:
+            self.divsym = np.mean([self.div, np.fliplr(self.div)],axis=0)
+            self.divasym = np.mean([self.div, -np.fliplr(self.div)],axis=0)
+
+    def plot(self, src = 'div', ref = 2, init=4):
+
+        _div = self.__dict__[src]
+        v = self.source.v
+
+        nspec = np.arange(len(self.div[init:]))
+        plum_cycle = pplt.Cycle("viridis",len(nspec),lw=1.5)
+
+        f2,a2 = pplt.subplots(refwidth=2.6, ncols=2, nrows=2, sharey=False, refaspect=1.4)
+        for iv in _div[init:]:
+            a2[0].semilogy(v,iv,cycle=plum_cycle)
+            a2[0].set_xlabel("bias (mv)")
+            a2[0].set_ylabel("didv",labelpad=-5)
+
+        evec = [(np.log(aa)-np.log(_div[ref])+1) for aa in _div[init:]]
+
+        evec_norm = [_e/np.mean(_e[0:10]) for _e in evec[3:]]
+
+        for ee in evec:
+            a2[1].plot(v, ee/np.mean(ee[-20:]),cycle=plum_cycle)
+            a2[1].set_xlabel("bias (mv)")
+            a2[1].set_ylabel(r"$\kappa / \kappa_{N}$")
+
+        a2[1].set_ylim([.9*np.min(np.array(evec_norm)),1.1*np.max(np.array(evec_norm))])
 
 
 
+
+        _tv = a2[2].imshow(np.array(evec_norm),cmap="balance",extent=[v[0],v[-1],len(_div),1],aspect=np.max(v)/(len(_div)-1))
+        _cbar = a2[2].colorbar(_tv, title=r"$\kappa / \kappa_{N}$")
+
+        for ee in evec:
+            a2[3].plot(v, ee,cycle=plum_cycle)
+            a2[3].set_xlabel("bias (mv)")
+            a2[3].set_ylabel(r"$\kappa$")
+
+        return f2
+
+    def plot_differential(self, src = 'div', init=6, delta=5):
+
+        _div = self.__dict__[src]
+        v = self.source.v
+
+        nspec = np.arange(len(self.div[init:]))
+        plum_cycle = pplt.Cycle("viridis",len(nspec),lw=1.5)
+
+        f2,a2 = pplt.subplots(refwidth=2.6, ncols=2, nrows=2, sharey=False, refaspect=1.4)
+        for iv in _div[init:]:
+            a2[0].semilogy(v,iv,cycle=plum_cycle)
+            a2[0].set_xlabel("bias (mv)")
+            a2[0].set_ylabel("didv",labelpad=-5)
+
+        evec = [(np.log(_div[_id])-np.log(_div[_id-delta])+1) for _id in np.arange(init,len(_div),1)]
+
+        evec_norm = [_e/np.mean(_e[0:10]) for _e in evec[3:]]
+
+        for ee in evec:
+            a2[1].plot(v, ee/np.mean(ee[0:10])+1,cycle=plum_cycle)
+            a2[1].set_xlabel("bias (mv)")
+            a2[1].set_ylabel(r"$\kappa / \kappa_{N}$")
+        a2[1].set_ylim([.9*np.min(np.array(evec_norm)),1.1*np.max(np.array(evec_norm))])
+
+
+
+
+        _tv = a2[2].imshow(np.array(evec_norm),cmap="balance",extent=[v[0],v[-1],len(_div),1],aspect=np.max(v)/(len(_div)-1))
+        _cbar = a2[2].colorbar(_tv, title=r"$\kappa / \kappa_{N}$")
+
+        for ee in evec:
+            a2[3].plot(v, ee,cycle=plum_cycle)
+            a2[3].set_xlabel("bias (mv)")
+            a2[3].set_ylabel(r"$\kappa$")
+
+        return f2
 
 
 
