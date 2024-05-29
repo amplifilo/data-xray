@@ -47,6 +47,20 @@ def PrettyMatplotlib():
     # linewdith_global = 1
     units = {'current': 'A', 'z': 'm', 'input 8': 'A', 'vert. deflection': 'V'}
 
+def PrettyProplot(fig_font_scale=1.1):
+    import proplot as pplt
+
+    #pplt.rc["axes.labelsize"]=12
+    #pplt.rc["axes.titlesize"]= 14
+    pplt.rc['fontname'] = 'Arial'
+    pplt.rcParams['font.size'] = fig_font_scale * 20
+    pplt.rcParams['axes.labelsize'] = fig_font_scale * 14
+    pplt.rcParams['axes.titleweight'] = 'bold'
+    pplt.rcParams['axes.titlesize'] = fig_font_scale * 14
+    pplt.rcParams['xtick.labelsize'] = fig_font_scale * 12
+    pplt.rcParams['ytick.labelsize'] = fig_font_scale * 12
+    pplt.rcParams['legend.fontsize'] = fig_font_scale * 10
+    pplt.rcParams['figure.titlesize'] = fig_font_scale * 14
 
 def SaveFigureAsImage(fileName, fig=None, **kwargs):
     ''' Save a Matplotlib figure as an image without borders or frames.

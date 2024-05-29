@@ -17,6 +17,7 @@ import functools
 import operator
 import warnings
 from scipy.signal import savgol_filter as savgol
+import proplot as pplt
 
 warnings.filterwarnings("ignore")
 
@@ -63,11 +64,18 @@ class SinglePointXarray():
         
         #this here is to check if the data file is a composite with multiple sequential spectra
         #z = np.asarray([float(s1.header["Z (m)"]) , float(s1.header["Z offset (m)"])])/1e-9;
-        z = np.unique(_s1xr.zf)
+        try:
+            z = np.unique(_s1xr.zf)
+        except:
+            z = np.sum(np.asarray([float(s1.header["Z (m)"]) , float(s1.header["Z offset (m)"])])/1e-9);
+        
+        #print(z)
+        #print(_s1xr)
         bias = _s1xr["bias"];
         data_keys = list(_s1xr.keys())
-
+        
         cur = np.mean([_s1xr[m] for m in current_keys if m in data_keys], axis=0);
+        
         diarr = []
         if didv_keys is not None:
             diarr = np.mean([_s1xr[m] for m in didv_keys if m in data_keys], axis=0)
@@ -84,8 +92,34 @@ class SinglePointXarray():
         
         return [z, bias, cur, diarr]
 
-    def ncar_set(self, ref = 2, init = 4, sym = False, didv_keys=['m2lix1f'], plotit=True):
-        import proplot as pplt
+    def iv_set_plot(self,ref = 2, init = 4, sym = False, didv_keys=['m2lix1f'], plotit=True, smooth=5 ):
+
+
+        self.div = self.source.di.data
+        
+        v = self.source.v
+
+        _yarr = np.apply_along_axis(lambda x: savgol(x,smooth,1,deriv=0), -1, self.div[init:])
+        _yarr_norm = _yarr
+
+        plum_cycle = pplt.Cycle("viridis",len(_yarr),lw=1.5)
+        colors = [c["color"] for c in plum_cycle][::-1]
+
+        f2,a2 = pplt.subplots(ncols=2, sharey=False, sharex=False)
+
+        for _y,_ynorm, _yc, in zip(_yarr,_yarr_norm, colors):
+
+            a2[0].plot(v,_y,c=_yc, linewidth=1.1 )
+            
+        a2[0].format(title='di/dv',grid=False, xticklabelsize=14,yticklabelsize=14,labelpad=3.0,xlabelsize=16,ylabelsize=16,
+                    xlabel='bias (mV)',ylabel=r'$\it{dI/dV}$')
+        
+        a2[1].imshow(np.log10(_yarr), aspect=6.0, cmap='mako', robust=True)
+        a2[1].format(ylim=[0,5], title='top view',grid=False, xticklabelsize=14,yticklabelsize=14)
+
+        
+    def ncar_set(self, ref = 2, init = 4, sym = False, didv_keys=['m2lix1f'], plotit=True, smooth=5):
+        
 
         self.div = self.source.di.data
         
@@ -95,37 +129,65 @@ class SinglePointXarray():
     
        
         if plotit:
-            _div = self.div
+
+            #_div = self.__dict__[src]
             v = self.source.v
+
+    #         nspec = np.arange(len(self.div[init:]))
+    #         plum_cycle = pplt.Cycle("viridis",len(nspec),lw=1.5)
+            _yarr = np.apply_along_axis(lambda x: savgol(x,smooth,1,deriv=0), -1, self.div[init:])
+            _yarr_norm = np.apply_along_axis(lambda x: x/np.mean(x[0:15]),-1,_yarr)
+            _yarr_norm = _yarr_norm/_yarr_norm[ref]
+
+            plum_cycle = pplt.Cycle("viridis",len(_yarr),lw=1.5)
+            colors = [c["color"] for c in plum_cycle][::-1]
+
+            f2,a2 = pplt.subplots(ncols=2, nrows=2, sharey=False, sharex=False)
+
+
+            for _y,_ynorm, _yc, in zip(_yarr,_yarr_norm, colors):
+
+                a2[0,0].plot(v,_y,c=_yc, linewidth=1.1 )
+                a2[0,1].plot(v,_ynorm,c=_yc, linewidth=1.1 )
+
+            a2[0,0].format(title='di/dv',grid=False, xticklabelsize=14,yticklabelsize=14,labelpad=3.0,xlabelsize=16,ylabelsize=16,
+                        xlabel='bias (mV)',ylabel=r'$\it{dI/dV}$')
+            a2[0,1].format(ylim=[0,5], title='exc di/dv',grid=False, xticklabelsize=14,yticklabelsize=14)
+
+            a2[1,0].imshow(np.log10(_yarr), aspect=6.0, cmap='mako', robust=True)
+            a2[1,1].imshow(_yarr_norm, aspect=6.0, cmap='mako', robust=True)
             
-            nspec = np.arange(len(self.div[init:]))
-            plum_cycle = pplt.Cycle("viridis",len(nspec),lw=1.5)
+            # _div = self.div
+            # v = self.source.v
             
-            f2,a2 = pplt.subplots(refwidth=2.6, ncols=2, nrows=2, sharey=False, refaspect=1.4)
-            for iv in _div[init:]:
-                a2[0].semilogy(v,iv,cycle=plum_cycle)
-                a2[0].set_xlabel("bias (mv)")
-                a2[0].set_ylabel("didv",labelpad=-5)
+            # nspec = np.arange(len(self.div[init:]))
+            # plum_cycle = pplt.Cycle("viridis",len(nspec),lw=1.5)
+            
+            # f2,a2 = pplt.subplots(refwidth=2.6, ncols=2, nrows=2, sharey=False, refaspect=1.4)
+            # for iv in _div[init:]:
+            #     a2[0].semilogy(v,iv,cycle=plum_cycle)
+            #     a2[0].set_xlabel("bias (mv)")
+            #     a2[0].set_ylabel("didv",labelpad=-5)
 
-            evec = [(np.log(aa)-np.log(_div[ref])+1) for aa in _div[init:]]
-
-
-            for ee in evec:
-                a2[1].plot(v, ee/np.mean(ee[-20:]),cycle=plum_cycle)
-                a2[1].set_xlabel("bias (mv)")
-                a2[1].set_ylabel(r"$\kappa / \kappa_{N}$")
-            a2[1].set_ylim([0.8,1.5])
-
-            evec_norm = [_e/np.mean(_e[0:10]) for _e in evec[3:]]
+            # evec = [(np.log(aa)-np.log(_div[ref])+1) for aa in _div[init:]]
 
 
-            _tv = a2[2].imshow(np.array(evec_norm),cmap="balance",extent=[v[0],v[-1],len(_div),1],aspect=np.max(v)/(len(_div)-1))
-            _cbar = a2[2].colorbar(_tv, title=r"$\kappa / \kappa_{N}$")
+            # for ee in evec:
+            #     a2[1].plot(v, ee/np.mean(ee[-20:]),cycle=plum_cycle)
+            #     a2[1].set_xlabel("bias (mv)")
+            #     a2[1].set_ylabel(r"$\kappa / \kappa_{N}$")
+            # a2[1].set_ylim([0.8,1.5])
 
-            for ee in evec:
-                a2[3].plot(v, ee,cycle=plum_cycle)
-                a2[3].set_xlabel("bias (mv)")
-                a2[3].set_ylabel(r"$\kappa$")
+            # evec_norm = [_e/np.mean(_e[0:10]) for _e in evec[3:]]
+
+
+            # _tv = a2[2].imshow(np.array(evec_norm),cmap="balance",extent=[v[0],v[-1],len(_div),1],aspect=np.max(v)/(len(_div)-1))
+            # _cbar = a2[2].colorbar(_tv, title=r"$\kappa / \kappa_{N}$")
+
+            # for ee in evec:
+            #     a2[3].plot(v, ee,cycle=plum_cycle)
+            #     a2[3].set_xlabel("bias (mv)")
+            #     a2[3].set_ylabel(r"$\kappa$")
 
             return f2
 

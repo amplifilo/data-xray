@@ -115,13 +115,16 @@ class GetData:
     def group_spectra(cls, data_list, group_sequences=3):
         #data must already be imported
                 fdicts = []
-                locs  = [tuple([float(_d.header["X (m)"]),float(_d.header["Y (m)"])]) for _d in data_list]
-                pddf = pd.DataFrame({'offset':locs, 'fname':data_list});
+                
+                _sublist = [d for d in data_list if "X (m)" in d.header.keys()]
+
+                locs  = [tuple([float(_d.header["X (m)"]),float(_d.header["Y (m)"])]) for _d in _sublist]
+                pddf = pd.DataFrame({'offset':locs, 'fname':_sublist});
 
                 pddf.groupby('offset').ngroups
                 for k, v in pddf.groupby('offset').groups.items():
                     if len(v) > group_sequences: #group_sequences can be as small as 1 (for 2 sequences)
-                        fdicts.append([data_list[vv] for vv in v])            
+                        fdicts.append([_sublist[vv] for vv in v])            
                 print('groups of spectra found')
                 print([len(f) for f in fdicts])
                 return fdicts

@@ -14,7 +14,8 @@ meanstd = lambda arr: np.std(np.ravel(arr)/np.mean(np.ravel(arr)))
 
 class SummaryPPT(object):
     #group-sequences selects sequential images with group_sequences images of the same area (like sequential slides)
-    def __init__(self, pname="image_summary", new=False, fdict=None, group_sequences = False, maximages=50, chanselect = {'scan':'Z', 'grid':'cf'}, **kwargs):
+    def __init__(self, pname="image_summary", new=False, fdict=None, group_sequences = False, maximages=50, 
+                    inject_method="insert_data", chanselect = {'scan':'Z', 'grid':'cf'}, **kwargs):
     
         if fdict is None:
             print('please specify data to summarize')
@@ -43,7 +44,8 @@ class SummaryPPT(object):
             self.init_ppt(self.presentation_name)
             
             #self.insert_images()
-            self.insert_data()
+            insert_func = getattr(self, inject_method, None)
+            insert_func()
             #try:
             self.pres.save(self.pptx_file_name)
             print('batch ' + str(j) +' stored in : ' + self.pptx_file_name )
@@ -173,7 +175,7 @@ class SummaryPPT(object):
 
         return
 
-    def insert_images(self):
+    def insert_Z_images(self):
         """
         Dumpt a batch of images into a powerpoint
 
@@ -237,27 +239,31 @@ class SummaryPPT(object):
             except:
                 print(os.path.basename(fj.ds.fname) + ' failed')
 
-    def png_to_ppt(self, pngfile, ttl = []):
-       """
-       Plop a PNG file into powerpoint slide
-       :param pngfile:
-       :param pres:
-       :param ttl:
-       :return:
-       """
+    def insert_photos(self):
+        #assumes that fdict is just filenames
 
-       #blank_slide_layout = pres.slide_layouts[6]
-       title_slide_layout = self.pres.slide_layouts[9]
+        for fj in self.fdict:
+            
+            slide_layout = self.pres.slide_layouts[5]  # 6 is the index for a blank slide
+            slide = self.pres.slides.add_slide(slide_layout)
+        
+            left = top = Inches(1)
+            pic = slide.shapes.add_picture(fj.fname, left, top, width=self.pres.slide_width - Inches(2))
+            
+            print(os.path.basename(fj.fname) + ' imported')
 
-       left = top = Inches(1)
+            title = slide.shapes.title
+            title.text = fj.fname
+            #self.text_to_slide(fj.fname, slide=slide)
 
-       slide = self.pres.slides.add_slide(title_slide_layout)
-       slide.shapes.add_picture(pngfile, left, top)
-       subtitle = slide.placeholders[1]
-       title = slide.shapes.title
-       if len(ttl):
-           subtitle.text = ttl
+            # titleString.append('Bias: ' + str(fj.header['bias']) + 'V')
+            # titleString.append('Control: ' + fj.header['z-controller']['Name'][0])
+            # titleString.append('Offsets: ' + xyoffsets[0] + xyoffsets[1])
+            # titleString.append('Resolution: ' + str(fj.header['scan_pixels']))
+            
+            #self.fig_to_ppt([f3], leftop=[1, 2], txt=titleString)
 
+        return
 
     def fig_to_ppt(self, figs, leftop=[0,1.5], txt=None):
         """
@@ -373,7 +379,6 @@ class QuickPPT(object):
 
        #blank_slide_layout = pres.slide_layouts[6]
        title_slide_layout = self.pres.slide_layouts[9]
-
        left = top = Inches(1)
 
        slide = self.pres.slides.add_slide(title_slide_layout)
@@ -436,7 +441,7 @@ class QuickPPT(object):
             print('please init presentation')
         else:
             if slide is None:
-                bullet_slide_layout = self.pres.slide_layouts[5]
+                bullet_slide_layout = self.pres.slide_layouts[6]
                 slide = self.pres.slides.add_slide(bullet_slide_layout)
 
             shapes = slide.shapes

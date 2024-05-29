@@ -20,7 +20,11 @@ data_xray/__init__.py
 data_xray/file_io.py
 data_xray/general_utilities.py
 data_xray/modules.py
-data_xray/taox_report.ipynb
+data_xray.egg-info/._PKG-INFO
+data_xray.egg-info/._SOURCES.txt
+data_xray.egg-info/._dependency_links.txt
+data_xray.egg-info/._requires.txt
+data_xray.egg-info/._top_level.txt
 data_xray.egg-info/PKG-INFO
 data_xray.egg-info/SOURCES.txt
 data_xray.egg-info/dependency_links.txt

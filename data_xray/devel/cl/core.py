@@ -55,10 +55,11 @@ def pack_xr(clh5, remove_spikes=True):
     return clxr
 
 
-def nmf_cl(xrsrc, n_components=3):
+def nmf_cl(xrsrc, n_components=3, **kwargs):
     model = NMF(n_components=n_components, init='random', random_state=0, max_iter=1000)
     W1 = model.fit_transform(np.abs(xrsrc.cl.data.reshape(-1, 1024)))
     H1 = model.components_
+
 
     f2, a2 = pplt.subplots(nrows=len(H1), ncols=2, share=False, refwidth=2.5, refaspect=2.0)
     for j in range(W1.shape[-1]):
@@ -68,7 +69,7 @@ def nmf_cl(xrsrc, n_components=3):
         a2[j, 1].format(xlabel="photon energy (eV)", ylabel="rel. counts")
 
     # f2.savefig(folder+'/png/'+base+"nmf_.png", dpi=300, transparent=True)
-    return [W1, H1]
+    return [[W1, H1], f2]
 
 
 def quick_cl_report(clh5):

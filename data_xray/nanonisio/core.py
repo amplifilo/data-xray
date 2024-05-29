@@ -828,7 +828,7 @@ class Spectrum(NanonisFile):
             ds.attrs[k] = v
         ds.attrs['filename'] = self.fname
         self.ds = ds
-    
+
         return ds
         
         #except:
