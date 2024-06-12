@@ -55,6 +55,8 @@ def pack_xr(clh5, remove_spikes=True):
     return clxr
 
 
+#updated on Jun 12, 2024
+
 def nmf_cl(xrsrc, n_components=3, **kwargs):
     model = NMF(n_components=n_components, init='random', random_state=0, max_iter=1000)
     W1 = model.fit_transform(np.abs(xrsrc.cl.data.reshape(-1, 1024)))
