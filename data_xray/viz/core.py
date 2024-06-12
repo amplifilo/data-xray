@@ -28,39 +28,47 @@ def XarrayToHviews(darr):
     d2.append(darr.values)
     return hv.Dataset(tuple(d2), list(darr.dims[::-1]), darr.name)
 
-def PrettyMatplotlib():
-
-    fig_font_scale = 1.1
-
-    plt.rcParams['font.size'] = fig_font_scale * 20
-    plt.rcParams['axes.labelsize'] = fig_font_scale * 14
-    plt.rcParams['axes.titleweight'] = 'bold'
-    plt.rcParams['axes.titlesize'] = fig_font_scale * 14
-    plt.rcParams['xtick.labelsize'] = fig_font_scale * 12
-    plt.rcParams['ytick.labelsize'] = fig_font_scale * 12
-    plt.rcParams['legend.fontsize'] = fig_font_scale * 10
-    plt.rcParams['figure.titlesize'] = fig_font_scale * 14
-    plt.rcParams['figure.dpi'] = 100
-    # plt.rcParams['figure.figsize'] = 4,4
-    plt.rcParams['figure.autolayout'] = True
-    plt.rcParams['svg.fonttype'] = 'none'
-    # linewdith_global = 1
-    units = {'current': 'A', 'z': 'm', 'input 8': 'A', 'vert. deflection': 'V'}
-
-def PrettyProplot(fig_font_scale=1.1):
+def PrettyProplot(fig_font_scale=1.0, **kwargs):
     import proplot as pplt
 
-    #pplt.rc["axes.labelsize"]=12
-    #pplt.rc["axes.titlesize"]= 14
+    pplt.rc["axes.labelsize"]=fig_font_scale *14
+    pplt.rc["axes.titlesize"]= fig_font_scale *16
     pplt.rc['fontname'] = 'Arial'
-    pplt.rcParams['font.size'] = fig_font_scale * 20
-    pplt.rcParams['axes.labelsize'] = fig_font_scale * 14
-    pplt.rcParams['axes.titleweight'] = 'bold'
-    pplt.rcParams['axes.titlesize'] = fig_font_scale * 14
-    pplt.rcParams['xtick.labelsize'] = fig_font_scale * 12
-    pplt.rcParams['ytick.labelsize'] = fig_font_scale * 12
-    pplt.rcParams['legend.fontsize'] = fig_font_scale * 10
-    pplt.rcParams['figure.titlesize'] = fig_font_scale * 14
+    pplt.rc['xtick.labelsize'] = fig_font_scale * 12
+    pplt.rc['ytick.labelsize'] = fig_font_scale * 12
+    pplt.rc["labelpad"]=0.7
+    for key, value in kwargs.items():
+        pplt.rc[key] = value
+    # pplt.rc['fontname'] = 'Arial'
+    # pplt.rc['font.size'] = fig_font_scale * 20
+    # pplt.rc['axes.labelsize'] = fig_font_scale * 14
+    # pplt.rc['axes.titleweight'] = 'bold'
+    # pplt.rc['axes.titlesize'] = fig_font_scale * 14
+    # pplt.rc['xtick.labelsize'] = fig_font_scale * 12
+    # pplt.rc['ytick.labelsize'] = fig_font_scale * 12
+    # pplt.rc['legend.fontsize'] = fig_font_scale * 10
+    # pplt.rc['figure.titlesize'] = fig_font_scale * 14
+
+def PrettyMatplotlib(fig_font_scale=1.0, **kwargs):
+    import matplotlib as mpl
+
+    mpl.rcParams["axes.labelsize"]=fig_font_scale *14
+    mpl.rcParams["axes.titlesize"]= fig_font_scale *16
+    mpl.rcParams['font.family'] = 'Arial'
+    mpl.rcParams['xtick.labelsize'] = fig_font_scale * 12
+    mpl.rcParams['ytick.labelsize'] = fig_font_scale * 12
+    mpl.rcParams["axes.labelpad"]=0.7
+    for key, value in kwargs.items():
+        mpl.rcParams[key] = value
+    # pplt.rc['fontname'] = 'Arial'
+    # pplt.rc['font.size'] = fig_font_scale * 20
+    # pplt.rc['axes.labelsize'] = fig_font_scale * 14
+    # pplt.rc['axes.titleweight'] = 'bold'
+    # pplt.rc['axes.titlesize'] = fig_font_scale * 14
+    # pplt.rc['xtick.labelsize'] = fig_font_scale * 12
+    # pplt.rc['ytick.labelsize'] = fig_font_scale * 12
+    # pplt.rc['legend.fontsize'] = fig_font_scale * 10
+    # pplt.rc['figure.titlesize'] = fig_font_scale * 14
 
 def SaveFigureAsImage(fileName, fig=None, **kwargs):
     ''' Save a Matplotlib figure as an image without borders or frames.
